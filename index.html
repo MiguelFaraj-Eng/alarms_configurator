@@ -2201,24 +2201,18 @@ function getGithubPAT(){ return null; } // PAT is on Vercel, not here
 
 // ── Proxy helper — replaces all direct GitHub fetch calls ──────────────────
 async function githubRequest(method, path, body){
-  // Send rawContent as plain string — Vercel proxy will base64 encode it
-  // This keeps the JSON payload smaller (base64 adds ~33% overhead)
-  if(body && body.content){
-    body = Object.assign({}, body);
-    try {
-      body.rawContent = atob(body.content); // decode back to raw string
-      delete body.content;
-    } catch(e) {
-      // If atob fails (binary content), keep as-is
-    }
-  }
   const res = await fetch(VERCEL_API, {
     method : 'POST',
     headers: { 'Content-Type': 'application/json' },
     body   : JSON.stringify({ method, path, body })
   });
-  const data = await res.json().catch(()=>({}));
-  if(!res.ok) throw new Error(`GitHub ${method} failed: ${res.status} — ${data.message || data.error || res.statusText}`);
+  const text = await res.text();
+  let data;
+  try { data = JSON.parse(text); } catch(e) { data = { raw: text }; }
+  if(!res.ok){
+    const msg = data.message || data.error || data.raw || res.statusText || 'unknown';
+    throw new Error(`GitHub ${method} failed: ${res.status} — ${msg}`);
+  }
   return data;
 }
 
@@ -2226,10 +2220,10 @@ async function githubGetFile(path){
   return await githubRequest('GET', path);
 }
 
-async function githubPutFile(path, contentBase64, sha, message){
+async function githubPutFile(path, rawContent, sha, message){
   return await githubRequest('PUT', path, {
     message,
-    content: contentBase64,
+    rawContent,
     ...(sha ? { sha } : {})
   });
 }
@@ -2801,19 +2795,18 @@ async function githubGetFile(path){
   return await githubRequest('GET', path);
 }
 
-async function githubPutFile(path, contentBase64, sha, message){
+async function githubPutFile(path, rawContent, sha, message){
   return await githubRequest('PUT', path, {
     message,
-    content: contentBase64,
+    rawContent,
     ...(sha ? { sha } : {})
   });
 }
 
 async function saveUsersToGitHub(updatedUsers){
   const jsonStr = JSON.stringify(updatedUsers, null, 2);
-  const base64 = btoa(unescape(encodeURIComponent(jsonStr)));
   const file = await githubGetFile('data/users.json');
-  await githubPutFile('data/users.json', base64, file.sha, `Update profile: ${AUTH.username}`);
+  await githubPutFile('data/users.json', jsonStr, file.sha, `Update profile: ${AUTH.username}`);
 }
 
 // ══════════════════════════════════════════════════
@@ -2880,7 +2873,7 @@ async function saveProfile(){
     // Upload avatar if provided
     if(newAvatarB64){
       const avatarFilename = AUTH.username.replace(/\s+/g,'_').toLowerCase() + '.jpg';
-      const pureB64 = newAvatarB64.split(',')[1];
+      const pureB64 = newAvatarB64.split(',')[1]; // raw base64 image data
       let avatarSha = undefined;
       try {
         const existing = await githubRequest('GET', `assets/avatars/${avatarFilename}`);
@@ -2889,15 +2882,14 @@ async function saveProfile(){
 
       const avatarRes = await githubRequest('PUT', `assets/avatars/${avatarFilename}`, {
         message: `Upload avatar for ${AUTH.username}`,
-        content: pureB64,
+        content: pureB64, // images stay as base64 — only JSON uses rawContent
         ...(avatarSha ? { sha: avatarSha } : {})
       });
       if(avatarRes) currentJson[idx].picture = avatarFilename;
     }
 
-    // Write updated users.json back
-    const updatedBase64 = btoa(unescape(encodeURIComponent(JSON.stringify(currentJson, null, 2))));
-    await githubPutFile('data/users.json', updatedBase64, fileData.sha, `Update profile: ${AUTH.username}`);
+    // Write updated users.json back using rawContent (Vercel encodes server-side)
+    await githubPutFile('data/users.json', JSON.stringify(currentJson, null, 2), fileData.sha, `Update profile: ${AUTH.username}`);
 
     // Update AUTH session to reflect changes
     const updated = currentJson[idx];
@@ -3053,7 +3045,6 @@ async function saveProjectToGitHub(){
 
     const pathObj = getProjectPath(AUTH.firstName, AUTH.lastName, ref);
     const jsonStr = JSON.stringify(snapshot, null, 2);
-    const b64 = btoa(unescape(encodeURIComponent(jsonStr)));
 
     // Check if file already exists (need sha for update)
     let sha = undefined;
@@ -3064,7 +3055,7 @@ async function saveProjectToGitHub(){
 
     await githubRequest('PUT', pathObj.apiPath, {
       message: `Save project: ${ref} by ${AUTH.username}`,
-      content: b64,
+      rawContent: jsonStr,
       ...(sha ? { sha } : {})
     });
 
