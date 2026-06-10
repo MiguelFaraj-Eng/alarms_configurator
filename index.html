@@ -339,9 +339,32 @@ html.light .login-logo{filter:none;}
 .role-admin{background:var(--accent-light);color:var(--accent);}
 .role-engineer{background:var(--green-light);color:var(--green);}
 
-/* ── ACCESS DENIED BANNER ────────────────────────────── */
-.access-denied{display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;gap:12px;color:var(--text2);}
-.access-denied-icon{font-size:48px;opacity:.3;}
+/* ── EDIT PROFILE MODAL ──────────────────────────────── */
+.profile-modal{max-width:480px;}
+.profile-avatar-section{display:flex;align-items:center;gap:16px;margin-bottom:20px;padding:16px;background:var(--surface2);border-radius:10px;}
+.profile-avatar-lg{width:64px;height:64px;border-radius:50%;object-fit:cover;border:2px solid var(--border);flex-shrink:0;}
+.profile-avatar-lg-ph{width:64px;height:64px;border-radius:50%;background:var(--accent);display:flex;align-items:center;justify-content:center;font-size:22px;font-weight:700;color:#fff;flex-shrink:0;}
+
+/* ── USER MANAGEMENT EXPANDED ────────────────────────── */
+.um-toolbar{display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap;align-items:center;}
+.um-search{flex:1;min-width:180px;padding:7px 10px 7px 30px;border-radius:8px;border:1.5px solid var(--border);background:var(--surface2);color:var(--text);font-size:12px;outline:none;}
+.um-search:focus{border-color:var(--accent);}
+.um-search-wrap{position:relative;flex:1;min-width:180px;}
+.um-search-icon{position:absolute;left:10px;top:50%;transform:translateY(-50%);color:var(--text3);font-size:13px;pointer-events:none;}
+.user-table{width:100%;border-collapse:collapse;background:var(--surface);border:1px solid var(--border);border-radius:10px;overflow:hidden;}
+.user-table th{font-family:'DM Mono',monospace;font-size:9px;letter-spacing:2px;text-transform:uppercase;color:var(--text3);padding:9px 14px;text-align:left;border-bottom:1.5px solid var(--border);background:var(--surface2);}
+.user-table td{padding:9px 14px;border-bottom:1px solid var(--border);font-size:12px;vertical-align:middle;}
+.user-table tr:last-child td{border-bottom:none;}
+.user-table tr:hover td{background:var(--surface2);}
+.user-table .u-avatar-sm{width:30px;height:30px;border-radius:50%;object-fit:cover;border:1.5px solid var(--border);}
+.user-table .u-avatar-sm-ph{width:30px;height:30px;border-radius:50%;background:var(--accent);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:#fff;flex-shrink:0;}
+.action-btns{display:flex;gap:4px;}
+.btn-icon{width:28px;height:28px;border-radius:6px;border:1px solid var(--border);background:var(--surface2);cursor:pointer;font-size:14px;display:flex;align-items:center;justify-content:center;transition:all .15s;color:var(--text2);}
+.btn-icon:hover{background:var(--surface);border-color:var(--text2);}
+.btn-icon.email:hover{background:var(--accent-light);border-color:var(--accent);color:var(--accent);}
+.btn-icon.whatsapp:hover{background:var(--green-light);border-color:var(--green);color:var(--green);}
+.btn-icon.forgot:hover{background:var(--orange-light);border-color:var(--orange);color:var(--orange);}
+
 </style>
 </head>
 <body>
@@ -362,6 +385,7 @@ html.light .login-logo{filter:none;}
       <div class="fg"><label>Password</label><input type="password" id="ls-pass" autocomplete="current-password" placeholder="Enter your password" onkeydown="if(event.key==='Enter')doAppLogin()"></div>
       <div id="ls-err" style="color:var(--red);font-size:11px;display:none;padding:6px 10px;background:var(--red-light);border-radius:6px;">Invalid username or password.</div>
       <button class="btn btn-primary" id="ls-btn" style="width:100%;margin-top:4px;padding:11px" onclick="doAppLogin()">Sign In</button>
+      <div style="text-align:center;margin-top:8px"><button class="btn btn-ghost btn-sm" onclick="openOverlay('forgotOverlay')" style="font-size:11px;color:var(--text3)">Forgot password?</button></div>
     </div>
     <div class="login-footer">INSIGHTECH · Alarm Configuration System · v9</div>
   </div>
@@ -399,6 +423,7 @@ html.light .login-logo{filter:none;}
           </div>
         </div>
         <div class="user-dd-item" onclick="closeUserMenu();goPage('project')">🏠 Dashboard</div>
+        <div class="user-dd-item" onclick="closeUserMenu();openEditProfile()">✏️ Edit Profile</div>
         <div class="user-dd-item" id="ddSettingsItem" onclick="closeUserMenu();trySettings()">⚙ Settings</div>
         <div class="user-dd-item" id="ddUsersItem" style="display:none" onclick="closeUserMenu();tryUsers()">👥 User Management</div>
         <div class="user-dd-item danger" onclick="doAppLogout()">⏻ Sign Out</div>
@@ -672,22 +697,91 @@ html.light .login-logo{filter:none;}
   <!-- PAGE: USERS (Admin only) -->
   <div class="page" id="page-users">
     <div class="users-page">
-      <div style="font-size:20px;font-weight:700;margin-bottom:6px;">👥 User Management</div>
-      <div style="font-size:12px;color:var(--text2);margin-bottom:24px;">Users are managed via <code style="font-family:'DM Mono',monospace;font-size:11px;background:var(--surface2);padding:2px 6px;border-radius:4px">data/users.json</code> in the GitHub repository. Update that file to add, remove, or change users.</div>
-      <div class="user-card-grid" id="userCardGrid">
-        <div style="font-size:12px;color:var(--text3)">Loading users…</div>
+      <div style="font-size:20px;font-weight:700;margin-bottom:4px;">👥 User Management</div>
+      <div style="font-size:12px;color:var(--text2);margin-bottom:20px;">Manage team access. Edit <code style="font-family:'DM Mono',monospace;font-size:11px;background:var(--surface2);padding:2px 6px;border-radius:4px">data/users.json</code> in GitHub to add/remove users or update credentials.</div>
+
+      <div class="um-toolbar">
+        <div class="um-search-wrap">
+          <span class="um-search-icon">⌕</span>
+          <input type="text" class="um-search" id="umSearch" placeholder="Search users…" oninput="filterUsersTable()">
+        </div>
+        <button class="btn btn-outline btn-sm" onclick="sendAllCredentials()" title="Email credentials to all engineers">📧 Email All</button>
       </div>
-      <div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:16px 20px;font-size:12px;color:var(--text2);margin-top:8px;">
-        <strong style="color:var(--text)">How to manage users:</strong> Edit <code style="font-family:'DM Mono',monospace;font-size:11px">data/users.json</code> in the repo. Each user needs: <code style="font-family:'DM Mono',monospace;font-size:11px">username</code>, <code style="font-family:'DM Mono',monospace;font-size:11px">passwordHash</code> (SHA-256), <code style="font-family:'DM Mono',monospace;font-size:11px">role</code> (admin/engineer), <code style="font-family:'DM Mono',monospace;font-size:11px">firstName</code>, <code style="font-family:'DM Mono',monospace;font-size:11px">lastName</code>, <code style="font-family:'DM Mono',monospace;font-size:11px">picture</code> (filename in <code style="font-family:'DM Mono',monospace;font-size:11px">assets/avatars/</code>).
-        <br><br>To generate a SHA-256 hash for a password, use: <code style="font-family:'DM Mono',monospace;font-size:11px;background:var(--surface2);padding:2px 6px;border-radius:4px">echo -n "yourpassword" | sha256sum</code>
+
+      <div style="overflow-x:auto">
+        <table class="user-table" id="userTable">
+          <thead><tr>
+            <th>User</th>
+            <th>Role</th>
+            <th>Email</th>
+            <th>Phone</th>
+            <th>Actions</th>
+          </tr></thead>
+          <tbody id="userTableBody">
+            <tr><td colspan="5" style="text-align:center;color:var(--text3);padding:24px">Loading users…</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:14px 18px;font-size:11px;color:var(--text2);margin-top:16px;line-height:1.7">
+        <strong style="color:var(--text)">📧 Email</strong> — opens your mail client pre-filled with credentials &nbsp;|&nbsp;
+        <strong style="color:var(--text)">💬 WhatsApp</strong> — opens WhatsApp Web with credentials &nbsp;|&nbsp;
+        <strong style="color:var(--text)">🔑 Forgot</strong> — sends admin a reset request email from that user
       </div>
     </div>
   </div>
-
 </div><!-- /main -->
 </div><!-- /app-body -->
 
 <!-- ═══════════ OVERLAYS ═══════════ -->
+<!-- EDIT PROFILE -->
+<div class="overlay" id="editProfileOverlay">
+  <div class="modal profile-modal">
+    <div class="modal-title">✏️ Edit Profile</div>
+    <div class="modal-sub">Update your personal information</div>
+    <div id="editProfileAvatarSection" class="profile-avatar-section"></div>
+    <div style="display:flex;flex-direction:column;gap:12px">
+      <div class="form-row">
+        <div class="fg"><label>First Name</label><input type="text" id="ep-firstName" placeholder="First name"></div>
+        <div class="fg"><label>Last Name</label><input type="text" id="ep-lastName" placeholder="Last name"></div>
+      </div>
+      <div class="fg"><label>Email</label><input type="email" id="ep-email" placeholder="your@email.com"></div>
+      <div class="fg"><label>Phone (with country code)</label><input type="tel" id="ep-phone" placeholder="+961 70 000 000"></div>
+      <div class="fg"><label>Avatar filename (in assets/avatars/)</label><input type="text" id="ep-picture" placeholder="yourname.jpg"></div>
+      <div style="border-top:1px solid var(--border);padding-top:14px;margin-top:2px">
+        <div style="font-size:11px;font-weight:600;color:var(--text);margin-bottom:10px">Change Password</div>
+        <div class="fg" style="margin-bottom:10px"><label>Current Password</label><input type="password" id="ep-currentPass" placeholder="Enter current password"></div>
+        <div class="form-row">
+          <div class="fg"><label>New Password</label><input type="password" id="ep-newPass" placeholder="New password"></div>
+          <div class="fg"><label>Confirm New</label><input type="password" id="ep-confirmPass" placeholder="Confirm password"></div>
+        </div>
+        <div id="ep-passErr" style="color:var(--red);font-size:11px;display:none;margin-top:4px"></div>
+      </div>
+      <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:4px">
+        <button class="btn btn-outline" onclick="closeOverlay('editProfileOverlay')">Cancel</button>
+        <button class="btn btn-primary" onclick="saveProfile()">Save Changes</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- FORGOT PASSWORD -->
+<div class="overlay" id="forgotOverlay">
+  <div class="modal" style="max-width:400px">
+    <div class="modal-title">🔑 Forgot Password</div>
+    <div class="modal-sub">Enter your username and we'll send a reset request to the admin.</div>
+    <div style="display:flex;flex-direction:column;gap:12px">
+      <div class="fg"><label>Username</label><input type="text" id="fp-username" placeholder="Your username"></div>
+      <div class="fg"><label>Your Email (so admin can reply)</label><input type="email" id="fp-email" placeholder="your@email.com"></div>
+      <div id="fp-msg" style="font-size:11px;display:none;padding:8px 10px;border-radius:6px"></div>
+      <div style="display:flex;gap:8px;margin-top:4px">
+        <button class="btn btn-outline" style="flex:1" onclick="closeOverlay('forgotOverlay')">Cancel</button>
+        <button class="btn btn-primary" style="flex:1" onclick="sendForgotPassword()">Send Request</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <!-- ADD EQUIPMENT -->
 <div class="overlay" id="addEqOverlay">
   <div class="modal" style="max-width:480px">
@@ -2041,7 +2135,13 @@ async function doAppLogin(){
     const hash = await sha256(p);
     const match = users.find(usr => usr.username.toLowerCase() === u.toLowerCase() && usr.passwordHash === hash);
     if(match){
-      AUTH = { username: match.username, role: match.role, firstName: match.firstName, lastName: match.lastName, picture: match.picture || '' };
+      AUTH = { 
+        username: match.username, role: match.role, 
+        firstName: match.firstName, lastName: match.lastName, 
+        picture: match.picture||'', email: match.email||'', 
+        phone: match.phone||'', password: match.password||'',
+        passwordHash: match.passwordHash
+      };
       sessionStorage.setItem('ic_auth', JSON.stringify(AUTH));
       document.getElementById('loginScreen').style.display = 'none';
       onLoginSuccess();
@@ -2206,73 +2306,347 @@ async function loadAlarmDBFromGitHub(){
 }
 
 // ── Render User Management page ──
+// ══════════════════════════════════════════════════
+//  USER MANAGEMENT PAGE
+// ══════════════════════════════════════════════════
+let ALL_USERS_CACHE = [];
+
 async function renderUsersPage(){
-  const grid = document.getElementById('userCardGrid');
-  if(!grid) return;
-  grid.innerHTML = '<div style="font-size:12px;color:var(--text3)">Loading users…</div>';
-  let users = [];
+  const tbody = document.getElementById('userTableBody');
+  if(!tbody) return;
+  tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;color:var(--text3);padding:24px">Loading users…</td></tr>';
   try {
-    const res = await fetch(REPO_BASE + 'data/users.json');
-    if(res.ok) users = await res.json();
+    const res = await fetch(REPO_BASE + 'data/users.json?' + Date.now());
+    if(res.ok) ALL_USERS_CACHE = await res.json();
     else throw new Error('not found');
   } catch(e) {
-    users = EMBEDDED_USERS || [];
+    ALL_USERS_CACHE = EMBEDDED_USERS || [];
   }
-  if(!users.length){ grid.innerHTML = '<div style="font-size:12px;color:var(--text3)">No users found.</div>'; return; }
+  renderUsersTable(ALL_USERS_CACHE);
+}
 
-  grid.innerHTML = '';
+function filterUsersTable(){
+  const q = (document.getElementById('umSearch').value||'').toLowerCase();
+  const filtered = ALL_USERS_CACHE.filter(u =>
+    (u.firstName||'').toLowerCase().includes(q) ||
+    (u.lastName||'').toLowerCase().includes(q) ||
+    (u.username||'').toLowerCase().includes(q) ||
+    (u.email||'').toLowerCase().includes(q)
+  );
+  renderUsersTable(filtered);
+}
+
+function renderUsersTable(users){
+  const tbody = document.getElementById('userTableBody');
+  if(!tbody) return;
+  if(!users.length){
+    tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;color:var(--text3);padding:24px">No users found.</td></tr>';
+    return;
+  }
+  tbody.innerHTML = '';
   users.forEach(u => {
     const initials = ((u.firstName||'')[0]||'') + ((u.lastName||'')[0]||'');
     const imgSrc = u.picture ? (REPO_BASE + 'assets/avatars/' + u.picture) : '';
     const isSelf = AUTH && AUTH.username === u.username;
     const roleCls = u.role === 'admin' ? 'role-admin' : 'role-engineer';
 
-    const card = document.createElement('div');
-    card.className = 'user-card';
-    if(isSelf) card.style.borderColor = 'var(--accent)';
+    const tr = document.createElement('tr');
 
+    // Avatar + Name cell
+    const tdUser = document.createElement('td');
+    tdUser.style.cssText = 'white-space:nowrap';
+    const nameWrap = document.createElement('div');
+    nameWrap.style.cssText = 'display:flex;align-items:center;gap:8px';
+
+    const avWrap = document.createElement('div');
     if(imgSrc){
       const img = document.createElement('img');
-      img.className = 'user-card-avatar';
+      img.className = 'u-avatar-sm';
       img.src = imgSrc;
-      img.alt = u.firstName || '';
+      img.alt = u.firstName||'';
       img.onerror = function(){
         const ph = document.createElement('div');
-        ph.className = 'user-card-avatar-ph';
+        ph.className = 'u-avatar-sm-ph';
         ph.textContent = initials;
-        img.parentElement.replaceChild(ph, img);
+        avWrap.replaceChild(ph, img);
       };
-      card.appendChild(img);
+      avWrap.appendChild(img);
     } else {
       const ph = document.createElement('div');
-      ph.className = 'user-card-avatar-ph';
+      ph.className = 'u-avatar-sm-ph';
       ph.textContent = initials;
-      card.appendChild(ph);
+      avWrap.appendChild(ph);
     }
+    nameWrap.appendChild(avWrap);
 
-    const nameEl = document.createElement('div');
-    nameEl.className = 'user-card-name';
-    nameEl.textContent = (u.firstName||'') + ' ' + (u.lastName||'');
-    if(isSelf){
-      const you = document.createElement('span');
-      you.style.cssText = 'font-size:9px;color:var(--accent);margin-left:4px';
-      you.textContent = '(you)';
-      nameEl.appendChild(you);
-    }
-    card.appendChild(nameEl);
+    const nameText = document.createElement('div');
+    nameText.innerHTML = `<div style="font-weight:500">${esc(u.firstName)} ${esc(u.lastName)}${isSelf?' <span style="font-size:9px;color:var(--accent)">(you)</span>':''}</div><div style="font-size:10px;color:var(--text3);font-family:\'DM Mono\',monospace">@${esc(u.username)}</div>`;
+    nameWrap.appendChild(nameText);
+    tdUser.appendChild(nameWrap);
+    tr.appendChild(tdUser);
 
-    const userEl = document.createElement('div');
-    userEl.className = 'user-card-user';
-    userEl.textContent = '@' + (u.username||'');
-    card.appendChild(userEl);
-
-    const badge = document.createElement('div');
+    // Role
+    const tdRole = document.createElement('td');
+    const badge = document.createElement('span');
     badge.className = 'role-badge ' + roleCls;
     badge.textContent = u.role||'';
-    card.appendChild(badge);
+    tdRole.appendChild(badge);
+    tr.appendChild(tdRole);
 
-    grid.appendChild(card);
+    // Email
+    const tdEmail = document.createElement('td');
+    tdEmail.style.cssText = 'font-size:11px;color:var(--text2)';
+    tdEmail.textContent = u.email || '—';
+    tr.appendChild(tdEmail);
+
+    // Phone
+    const tdPhone = document.createElement('td');
+    tdPhone.style.cssText = 'font-size:11px;color:var(--text2)';
+    tdPhone.textContent = u.phone || '—';
+    tr.appendChild(tdPhone);
+
+    // Actions
+    const tdActions = document.createElement('td');
+    const btnWrap = document.createElement('div');
+    btnWrap.className = 'action-btns';
+
+    if(u.email && u.password){
+      const btnEmail = document.createElement('button');
+      btnEmail.className = 'btn-icon email';
+      btnEmail.title = 'Email credentials';
+      btnEmail.textContent = '📧';
+      btnEmail.onclick = () => sendCredentialsEmail(u);
+      btnWrap.appendChild(btnEmail);
+    }
+
+    if(u.phone && u.password){
+      const btnWA = document.createElement('button');
+      btnWA.className = 'btn-icon whatsapp';
+      btnWA.title = 'Send via WhatsApp';
+      btnWA.textContent = '💬';
+      btnWA.onclick = () => sendCredentialsWhatsApp(u);
+      btnWrap.appendChild(btnWA);
+    }
+
+    if(u.email){
+      const btnForgot = document.createElement('button');
+      btnForgot.className = 'btn-icon forgot';
+      btnForgot.title = 'Send reset request';
+      btnForgot.textContent = '🔑';
+      btnForgot.onclick = () => sendAdminResetEmail(u);
+      btnWrap.appendChild(btnForgot);
+    }
+
+    tdActions.appendChild(btnWrap);
+    tr.appendChild(tdActions);
+    tbody.appendChild(tr);
   });
+}
+
+function sendCredentialsEmail(u){
+  const subject = encodeURIComponent('Insightech Alarms Configurator — Your Login Credentials');
+  const body = encodeURIComponent(
+`Dear ${u.firstName},
+
+Your access credentials for the Insightech Alarms Configurator have been set up.
+
+🔗 App URL: https://miguelfaraj-eng.github.io/alarms_configurator/
+👤 Username: ${u.username}
+🔑 Password: ${u.password}
+
+Please log in and change your password from Edit Profile after your first login.
+
+Best regards,
+Miguel Faraj
+Insightech`
+  );
+  window.open(`mailto:${u.email}?subject=${subject}&body=${body}`);
+}
+
+function sendCredentialsWhatsApp(u){
+  const phone = (u.phone||'').replace(/[^0-9]/g,'');
+  const msg = encodeURIComponent(
+`Hi ${u.firstName}! 👋
+
+Here are your login credentials for the *Insightech Alarms Configurator*:
+
+🔗 App: https://miguelfaraj-eng.github.io/alarms_configurator/
+👤 Username: *${u.username}*
+🔑 Password: *${u.password}*
+
+Please change your password after first login.`
+  );
+  window.open(`https://wa.me/${phone}?text=${msg}`, '_blank');
+}
+
+function sendAdminResetEmail(u){
+  const adminEmail = (ALL_USERS_CACHE.find(x=>x.role==='admin')||{}).email || 'miguel.faraj@insightech.com';
+  const subject = encodeURIComponent(`Password Reset Request — ${u.username}`);
+  const body = encodeURIComponent(
+`Hi Miguel,
+
+${u.firstName} ${u.lastName} (${u.email}) has requested a password reset for their account.
+
+Username: ${u.username}
+
+Please update their password in data/users.json and share the new credentials.
+
+Regards,
+Insightech Configurator`
+  );
+  window.open(`mailto:${adminEmail}?subject=${subject}&body=${body}`);
+  toast(`Reset request email opened for ${u.firstName} ✓`);
+}
+
+function sendAllCredentials(){
+  const engineers = ALL_USERS_CACHE.filter(u => u.role !== 'admin' && u.email && u.password);
+  if(!engineers.length){ toast('No engineers with email found.','err'); return; }
+  const to = engineers.map(u=>u.email).join(',');
+  const subject = encodeURIComponent('Insightech Alarms Configurator — Your Login Credentials');
+  const body = encodeURIComponent(
+`Dear Team,
+
+Your individual login credentials for the Insightech Alarms Configurator have been set up.
+
+🔗 App URL: https://miguelfaraj-eng.github.io/alarms_configurator/
+
+Each person will receive their username and password separately. If you haven't received yours, please contact Miguel Faraj.
+
+Please change your password after your first login via Edit Profile.
+
+Best regards,
+Miguel Faraj
+Insightech`
+  );
+  window.open(`mailto:${to}?subject=${subject}&body=${body}`);
+}
+
+// ══════════════════════════════════════════════════
+//  EDIT PROFILE
+// ══════════════════════════════════════════════════
+function openEditProfile(){
+  if(!AUTH) return;
+  document.getElementById('ep-firstName').value = AUTH.firstName||'';
+  document.getElementById('ep-lastName').value = AUTH.lastName||'';
+  document.getElementById('ep-email').value = AUTH.email||'';
+  document.getElementById('ep-phone').value = AUTH.phone||'';
+  document.getElementById('ep-picture').value = AUTH.picture||'';
+  document.getElementById('ep-currentPass').value = '';
+  document.getElementById('ep-newPass').value = '';
+  document.getElementById('ep-confirmPass').value = '';
+  document.getElementById('ep-passErr').style.display = 'none';
+
+  // Render avatar in modal
+  const sec = document.getElementById('editProfileAvatarSection');
+  const initials = ((AUTH.firstName||'')[0]||'') + ((AUTH.lastName||'')[0]||'');
+  const imgSrc = AUTH.picture ? (REPO_BASE + 'assets/avatars/' + AUTH.picture) : '';
+  sec.innerHTML = '';
+  if(imgSrc){
+    const img = document.createElement('img');
+    img.className = 'profile-avatar-lg';
+    img.src = imgSrc;
+    img.alt = AUTH.firstName||'';
+    img.onerror = function(){
+      const ph = document.createElement('div');
+      ph.className = 'profile-avatar-lg-ph';
+      ph.textContent = initials;
+      sec.replaceChild(ph, img);
+    };
+    sec.appendChild(img);
+  } else {
+    const ph = document.createElement('div');
+    ph.className = 'profile-avatar-lg-ph';
+    ph.textContent = initials;
+    sec.appendChild(ph);
+  }
+  const info = document.createElement('div');
+  info.innerHTML = `<div style="font-weight:600;font-size:14px">${esc(AUTH.firstName)} ${esc(AUTH.lastName)}</div>
+    <div style="font-size:11px;color:var(--text3);font-family:'DM Mono',monospace;margin-top:2px">${esc(AUTH.role)} · @${esc(AUTH.username)}</div>
+    <div style="font-size:11px;color:var(--text2);margin-top:4px">⚠ Changes are saved in your browser session.<br>To make them permanent, push the updated users.json to GitHub.</div>`;
+  sec.appendChild(info);
+
+  openOverlay('editProfileOverlay');
+}
+
+async function saveProfile(){
+  const errEl = document.getElementById('ep-passErr');
+  errEl.style.display = 'none';
+
+  const newFirst = document.getElementById('ep-firstName').value.trim();
+  const newLast  = document.getElementById('ep-lastName').value.trim();
+  const newEmail = document.getElementById('ep-email').value.trim();
+  const newPhone = document.getElementById('ep-phone').value.trim();
+  const newPic   = document.getElementById('ep-picture').value.trim();
+  const curPass  = document.getElementById('ep-currentPass').value;
+  const newPass  = document.getElementById('ep-newPass').value;
+  const confPass = document.getElementById('ep-confirmPass').value;
+
+  // Password change validation
+  if(newPass || curPass){
+    if(!curPass){ errEl.textContent='Enter your current password.'; errEl.style.display='block'; return; }
+    const curHash = await sha256(curPass);
+    if(curHash !== AUTH.passwordHash){ errEl.textContent='Current password is incorrect.'; errEl.style.display='block'; return; }
+    if(newPass.length < 8){ errEl.textContent='New password must be at least 8 characters.'; errEl.style.display='block'; return; }
+    if(newPass !== confPass){ errEl.textContent='New passwords do not match.'; errEl.style.display='block'; return; }
+    AUTH.passwordHash = await sha256(newPass);
+    AUTH.password = newPass;
+  }
+
+  // Update AUTH session
+  AUTH.firstName = newFirst || AUTH.firstName;
+  AUTH.lastName  = newLast  || AUTH.lastName;
+  AUTH.email     = newEmail;
+  AUTH.phone     = newPhone;
+  AUTH.picture   = newPic;
+  sessionStorage.setItem('ic_auth', JSON.stringify(AUTH));
+
+  // Refresh UI
+  renderHeaderAvatar();
+  populateEngineerBanner();
+  closeOverlay('editProfileOverlay');
+  toast('Profile updated ✓ — push users.json to GitHub to make permanent.');
+
+  // Show updated JSON snippet for admin to copy
+  const updatedUser = {
+    username: AUTH.username,
+    passwordHash: AUTH.passwordHash,
+    password: AUTH.password||'',
+    role: AUTH.role,
+    firstName: AUTH.firstName,
+    lastName: AUTH.lastName,
+    email: AUTH.email,
+    phone: AUTH.phone,
+    picture: AUTH.picture
+  };
+  console.log('Updated user entry for users.json:', JSON.stringify(updatedUser, null, 2));
+}
+
+// ══════════════════════════════════════════════════
+//  FORGOT PASSWORD
+// ══════════════════════════════════════════════════
+function sendForgotPassword(){
+  const username = document.getElementById('fp-username').value.trim();
+  const email    = document.getElementById('fp-email').value.trim();
+  const msgEl    = document.getElementById('fp-msg');
+
+  if(!username){ msgEl.style.cssText='display:block;color:var(--red);background:var(--red-light);border-radius:6px;padding:8px 10px;font-size:11px'; msgEl.textContent='Please enter your username.'; return; }
+
+  const adminEmail = (EMBEDDED_USERS.find(u=>u.role==='admin')||{}).email || 'miguel.faraj@insightech.com';
+  const subject = encodeURIComponent(`[Password Reset] ${username} needs access`);
+  const body = encodeURIComponent(
+`Hi Miguel,
+
+${username} has forgotten their password and is requesting a reset.
+
+${email ? 'Their email: ' + email : 'They did not provide an email.'}
+
+Please update their password in data/users.json and send them their new credentials.
+
+Thanks`
+  );
+  window.open(`mailto:${adminEmail}?subject=${subject}&body=${body}`);
+  msgEl.style.cssText = 'display:block;color:var(--green);background:var(--green-light);border-radius:6px;padding:8px 10px;font-size:11px';
+  msgEl.textContent = 'Reset request opened in your email client. The admin will contact you shortly.';
 }
 
 // ══════════════════════════════════════════════════
@@ -2295,7 +2669,9 @@ function tryUsers(){
   renderUsersPage();
 }
 
-function doLogin(){} // legacy stub — replaced by doAppLogin
+function doLogin(){} // legacy stub
+
+
 
 function renderSettingsTable(){
   const q=(document.getElementById('settingsSearch')||{}).value||'';
