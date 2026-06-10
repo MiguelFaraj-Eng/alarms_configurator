@@ -2,7 +2,7 @@
 
 A web-based alarm configuration tool for industrial automation projects. Engineers select equipment, configure alarm quantities, and export ready-to-use alarm lists in CSV or PLC-native formats (Siemens SCL / Rockwell L5X).
 
-Hosted on GitHub Pages · Private repository · Role-based access
+Hosted on GitHub Pages · Backend on Vercel · Private repository · Role-based access
 
 ---
 
@@ -21,12 +21,22 @@ alarms_configurator/
 │
 ├── index.html                  ← Single-file app (all HTML, CSS, JS)
 │
+├── api/
+│   └── github.js               ← Vercel serverless proxy (keeps PAT secret)
+│
+├── vercel.json                 ← Vercel deployment config
+│
 ├── data/
 │   ├── users.json              ← User accounts (credentials, roles, contact info)
 │   └── alarms_template.xlsx   ← Master alarm database (loaded on login)
 │
 ├── assets/
 │   └── avatars/                ← User profile pictures (e.g. miguel.jpg)
+│
+├── Projects/
+│   └── <Engineer Name>/
+│       └── <Project Reference>/
+│           └── project.json    ← Full saved project configuration
 │
 └── README.md
 ```
@@ -38,26 +48,37 @@ alarms_configurator/
 ### Authentication
 - Login screen with username + SHA-256 hashed password
 - Role-based access: **Admin** and **Engineer**
-- Forgot password flow — sends a reset request email to the admin
+- Forgot password — inline panel on login screen, sends reset request email to admin
 - Session stored in `sessionStorage` (clears on tab close)
 
 ### Role Permissions
 
 | Feature | Admin | Engineer |
 |---|:---:|:---:|
+| Dashboard — view own projects | ✅ | ✅ |
+| Dashboard — view ALL projects | ✅ | ❌ |
 | Configure alarm list (enable/disable/delete) | ✅ | ✅ |
 | Export (CSV / Siemens SCL / Rockwell L5X) | ✅ | ✅ |
+| Save project to GitHub | ✅ | ✅ |
 | Common Alarms wizard | ✅ | ✅ |
+| Edit Profile (name, email, phone, photo, password) | ✅ | ✅ |
 | Edit alarm names & descriptions | ✅ | ❌ |
 | Settings page (import alarm DB) | ✅ | ❌ |
 | User Management page | ✅ | ❌ |
 | Send credentials to engineers | ✅ | ❌ |
 
+### Dashboard
+- Shows all saved projects as cards (engineers see their own, admin sees everyone's)
+- Per project: reference, name, client, site, engineer, last saved timestamp, equipment count
+- **▶ Open** — restores full configuration back into the wizard
+- **🗑 Delete** — removes project from GitHub
+- **+ New Project** — resets wizard for a fresh start
+
 ### Workflow (4-step wizard)
 1. **Project Info** — project name, client, reference, site (engineer name/date auto-filled from login)
 2. **Equipment Selection** — choose from 11 categories, 50+ equipment types
 3. **Configure** — set quantities per equipment, enable/disable individual alarms by type
-4. **Export** — CSV, Siemens SCL, or Rockwell L5X
+4. **Export** — CSV, Siemens SCL, or Rockwell L5X + save project to GitHub
 
 ### User Management (Admin)
 - Table view of all users with avatar, role, email, phone
@@ -66,9 +87,30 @@ alarms_configurator/
 
 ### Edit Profile (all users)
 - Update first/last name, email, phone
-- Upload profile photo → saved directly to `assets/avatars/` on GitHub
-- Change password → hashed and saved to `users.json` on GitHub
-- Requires a GitHub Personal Access Token (PAT) — see setup below
+- Upload profile photo → saved directly to `assets/avatars/` on GitHub via Vercel proxy
+- Change password → SHA-256 hashed and saved to `users.json` on GitHub via Vercel proxy
+
+---
+
+## Architecture
+
+```
+Browser (GitHub Pages)
+        │
+        │  POST /api/github
+        │  { method, path, body }
+        ▼
+Vercel Serverless Function (api/github.js)
+        │  PAT stored in Vercel environment variables
+        │  Never exposed to the browser
+        ▼
+GitHub Contents API
+        │
+        ▼
+alarms_configurator repo (users.json, projects, avatars)
+```
+
+All write operations (profile edits, project saves, avatar uploads) go through the Vercel proxy. The GitHub PAT never appears in the frontend code.
 
 ---
 
@@ -78,37 +120,46 @@ alarms_configurator/
 
 GitHub → repo → **Settings → Danger Zone → Change visibility → Private**
 
-> ⚠ The repo must be private because the GitHub PAT used for profile editing is stored in the browser and could otherwise be read by anyone.
-
 ### 2. Enable GitHub Pages
 
 GitHub → repo → **Settings → Pages → Source: Deploy from branch → main → / (root)**
 
 The app will be live at `https://miguelfaraj-eng.github.io/alarms_configurator/`
 
-### 3. Upload the alarm template
+### 3. Deploy the Vercel proxy
 
-Place your alarm Excel file at:
-```
-data/alarms_template.xlsx
-```
-The app fetches this file automatically on login. Each sheet tab = one equipment type. Column format:
+1. Go to **[vercel.com](https://vercel.com)** → sign in with GitHub
+2. **Add New → Project** → import `alarms_configurator`
+3. Add these **Environment Variables** (Production only):
+
+| Key | Value |
+|---|---|
+| `GITHUB_PAT` | your fine-grained token `github_pat_...` |
+| `GITHUB_REPO` | `miguelfaraj-eng/alarms_configurator` |
+| `GITHUB_BRANCH` | `main` |
+| `ALLOWED_ORIGIN` | `https://miguelfaraj-eng.github.io` |
+
+4. Click **Deploy**
+5. Your API will be live at `https://alarms-configurator.vercel.app/api/github`
+
+### 4. Generate the GitHub PAT
+
+1. **GitHub → Settings → Developer Settings → Personal Access Tokens → Fine-grained tokens → Generate new token**
+2. Select repository: `alarms_configurator`
+3. **Repository permissions → Contents → Read and Write**
+4. Copy the token and add it as `GITHUB_PAT` in Vercel
+
+### 5. Upload the alarm template
+
+Place your alarm Excel file at `data/alarms_template.xlsx`. The app fetches it automatically on login.
+
+Column format:
 
 | Column A | Column B | Column C | Column D | Column E |
 |---|---|---|---|---|
 | Tag / Group header | Description | Category | Alarm ID | Priority (0 or 5) |
 
-If a row has a tag but no description, it's treated as a **group header**.
-
-### 4. Configure the GitHub PAT (for profile editing)
-
-1. Go to **GitHub → Settings → Developer Settings → Personal Access Tokens → Fine-grained tokens → Generate new token**
-2. Set expiry, select repository: `alarms_configurator`
-3. Under **Repository permissions** → **Contents** → **Read and Write**
-4. Copy the token (starts with `github_pat_...`)
-5. In the app: log in as Admin → **Settings → GitHub Token** → paste and click **Save Token**
-
-The token is tested live — the app will tell you exactly what's wrong if it fails (401 = invalid, 403 = missing permissions, 404 = wrong repo).
+If a row has a tag but no description it is treated as a group header.
 
 ---
 
@@ -132,15 +183,30 @@ Edit `data/users.json` directly in the repo. Each user entry:
 
 **Roles:** `admin` or `engineer`
 
-**Generating a password hash** (run in terminal):
+**Generating a password hash:**
 ```bash
 echo -n "yourpassword" | sha256sum
 ```
 
-**Adding a profile picture:**
-Upload the image to `assets/avatars/` and set `"picture"` to the filename.
+**Adding a profile picture:** upload the image to `assets/avatars/` and set `"picture"` to the filename. Users can also upload their own photo via Edit Profile.
 
 ### Current team: 28 users (1 admin, 27 engineers)
+
+---
+
+## Projects Storage
+
+Projects are saved to GitHub under:
+```
+Projects/<Engineer Full Name>/<Project Reference>/project.json
+```
+
+Each `project.json` contains the full configuration snapshot:
+- Project info (name, reference, client, site, engineer, date)
+- Equipment selections and quantities
+- Full alarm states (enabled/disabled/deleted per entity)
+- Common alarms
+- Metadata (saved at, saved by, version)
 
 ---
 
@@ -152,27 +218,14 @@ Upload the image to `assets/avatars/` and set `"picture"` to the filename.
 | **SCL — Siemens** | TIA Portal / STEP 7 (S7-300/400/1200/1500) |
 | **SCL — Rockwell** | Studio 5000 / RSLogix 5000 (Allen-Bradley) |
 
-All exports include: project info header, equipment list with quantities, full alarm definitions respecting any deletions made in the configure step.
-
----
-
-## Common Alarms Wizard
-
-Accessible from the Configure page. Generates project-level alarms (not per-equipment) for:
-
-- INSIGHTECH panel batteries, UPS, UPS Buffer
-- Robot panels (batteries per panel)
-- Per-equipment: batteries, UPS, UPS Buffer, temperature sensors, guard switches, light barriers, safety valves
-- Per-line: batteries, UPS, temperature sensors, pneumatic pressure sensors, emergency stops, rope pulls, light barriers
-- Zone feedback lines
-
 ---
 
 ## Tech Stack
 
-- **Pure HTML/CSS/JS** — no framework, no build step, no server
+- **Pure HTML/CSS/JS** — no framework, no build step
+- **Vercel Serverless Functions** — secure GitHub API proxy
 - **SheetJS (xlsx.js)** — Excel import/export
-- **GitHub Contents API** — profile saving, avatar upload
+- **GitHub Contents API** — project storage, profile saving, avatar upload
 - **SHA-256 (Web Crypto API)** — password hashing client-side
 - **DM Sans + DM Mono** — typography (Google Fonts)
 
@@ -180,5 +233,5 @@ Accessible from the Configure page. Generates project-level alarms (not per-equi
 
 ## Contact
 
-**Miguel Faraj** — miguelfaraj@outlook.com 
+**Miguel Faraj** — miguel.faraj@insightech.com  
 Insightech · Alarm Configuration System · v10
