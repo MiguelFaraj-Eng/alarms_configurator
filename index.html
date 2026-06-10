@@ -3146,16 +3146,15 @@ function tryUsers(){
 // ══════════════════════════════════════════════════
 
 function getProjectPath(firstName, lastName, projectRef){
-  // Path: Projects/<FirstName LastName>/<ProjectRef>/project.json
-  // GitHub API creates intermediate folders automatically when you PUT a file
-  // We encode each segment separately for the API URL but store the readable path
-  const userName = `${firstName} ${lastName}`.trim();
-  const safeRef  = (projectRef||'unnamed').trim();
+  // Each segment encoded individually, slashes kept as real separators
+  const seg1 = 'Projects';
+  const seg2 = encodeURIComponent(`${firstName} ${lastName}`.trim());
+  const seg3 = encodeURIComponent((projectRef||'unnamed').trim());
+  const seg4 = 'project.json';
   return {
-    display : `Projects/${userName}/${safeRef}/project.json`,
-    encoded : `Projects/${encodeURIComponent(userName)}/${encodeURIComponent(safeRef)}/project.json`,
-    userName,
-    projectRef: safeRef
+    apiPath  : `${seg1}/${seg2}/${seg3}/${seg4}`,
+    userName : `${firstName} ${lastName}`.trim(),
+    projectRef: (projectRef||'unnamed').trim()
   };
 }
 
@@ -3260,7 +3259,7 @@ async function saveProjectToGitHub(){
     // Check if file already exists (need sha for update)
     let sha = undefined;
     try {
-      const existing = await fetch(`https://api.github.com/repos/${GITHUB_REPO}/contents/${pathObj.encoded}`,{
+      const existing = await fetch(`https://api.github.com/repos/${GITHUB_REPO}/contents/${pathObj.apiPath}`,{
         headers:{'Authorization':`Bearer ${getGithubPAT()}`,'Accept':'application/vnd.github+json'}
       });
       if(existing.ok){ const d = await existing.json(); sha = d.sha; }
@@ -3273,7 +3272,7 @@ async function saveProjectToGitHub(){
     };
     if(sha) body.sha = sha;
 
-    const res = await fetch(`https://api.github.com/repos/${GITHUB_REPO}/contents/${pathObj.encoded}`,{
+    const res = await fetch(`https://api.github.com/repos/${GITHUB_REPO}/contents/${pathObj.apiPath}`,{
       method :'PUT',
       headers:{
         'Authorization':`Bearer ${getGithubPAT()}`,
