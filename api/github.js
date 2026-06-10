@@ -3,6 +3,15 @@
  * Runs on Vercel. The GitHub PAT never leaves the server.
  */
 
+// Increase body size limit to 10MB
+export const config = {
+  api: {
+    bodyParser: {
+      sizeLimit: '10mb',
+    },
+  },
+};
+
 module.exports = async function handler(req, res) {
   const GITHUB_PAT    = process.env.GITHUB_PAT;
   const GITHUB_REPO   = process.env.GITHUB_REPO   || 'miguelfaraj-eng/alarms_configurator';
@@ -28,7 +37,14 @@ module.exports = async function handler(req, res) {
     return res.status(405).json({ error: 'Method not allowed. Use POST.' });
   }
 
-  const { method = 'GET', path, body: reqBody } = req.body || {};
+  let reqBody_parsed;
+  try {
+    reqBody_parsed = typeof req.body === 'string' ? JSON.parse(req.body) : req.body;
+  } catch(e) {
+    return res.status(400).json({ error: 'Invalid JSON body: ' + e.message });
+  }
+
+  const { method = 'GET', path, body: reqBody } = reqBody_parsed || {};
 
   if (!path) {
     return res.status(400).json({ error: 'Missing required field: path' });
