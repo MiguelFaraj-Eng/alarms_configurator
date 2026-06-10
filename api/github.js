@@ -66,6 +66,10 @@ module.exports = async function handler(req, res) {
     const ghData = await ghRes.json().catch(() => ({}));
     return res.status(ghRes.status).json(ghData);
   } catch (err) {
-    return res.status(502).json({ error: 'GitHub API request failed: ' + err.message });
+    return res.status(502).json({ 
+      error: 'GitHub API request failed: ' + err.message,
+      url: githubUrl,
+      method: fetchOptions.method
+    });
   }
 };
