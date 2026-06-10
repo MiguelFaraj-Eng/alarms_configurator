@@ -44,16 +44,8 @@ module.exports = async function handler(req, res) {
   }
 
   // ── Forward to GitHub API ────────────────────────────────────────────────────
-  // Decode first, then build URL — prevents double-encoding of %20 etc.
-  const decodedPath = decoded; // already decoded above for security check
   const encodedSegments = decodedPath.split('/').map(s => encodeURIComponent(s)).join('/');
   const githubUrl = `https://api.github.com/repos/${GITHUB_REPO}/contents/${encodedSegments}`;
-  
-  // Debug — remove after testing
-  console.log('PATH RECEIVED:', path);
-  console.log('DECODED:', decodedPath);
-  console.log('ENCODED SEGMENTS:', encodedSegments);
-  console.log('GITHUB URL:', githubUrl);
 
   const fetchOptions = {
     method: method.toUpperCase(),
@@ -72,12 +64,6 @@ module.exports = async function handler(req, res) {
   try {
     const ghRes  = await fetch(githubUrl, fetchOptions);
     const ghData = await ghRes.json().catch(() => ({}));
-    // Add debug info to response temporarily
-    if(ghData && typeof ghData === 'object'){
-      ghData._debug_url = githubUrl;
-      ghData._debug_path_received = path;
-      ghData._debug_decoded = decodedPath;
-    }
     return res.status(ghRes.status).json(ghData);
   } catch (err) {
     return res.status(502).json({ error: 'GitHub API request failed: ' + err.message });
