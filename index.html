@@ -2940,15 +2940,12 @@ function tryUsers(){
 // ══════════════════════════════════════════════════
 
 function getProjectPath(firstName, lastName, projectRef){
-  // Each segment encoded individually, slashes kept as real separators
-  const seg1 = 'Projects';
-  const seg2 = encodeURIComponent(`${firstName} ${lastName}`.trim());
-  const seg3 = encodeURIComponent((projectRef||'unnamed').trim());
-  const seg4 = 'project.json';
+  const userName   = `${firstName} ${lastName}`.trim();
+  const safeRef    = (projectRef||'unnamed').trim();
   return {
-    apiPath  : `${seg1}/${seg2}/${seg3}/${seg4}`,
-    userName : `${firstName} ${lastName}`.trim(),
-    projectRef: (projectRef||'unnamed').trim()
+    apiPath  : `Projects/${userName}/${safeRef}/project.json`,
+    userName,
+    projectRef: safeRef
   };
 }
 
@@ -3090,8 +3087,7 @@ async function loadDashboard(){
 
     try {
       const data = await githubRequest('GET', 'Projects');
-      userFolders = Array.isArray(data) ? data.filter(f=>f.type==='dir') : [];
-      if(!isAdmin){
+      userFolders = Array.isArray(data) ? data.filter(f=>f.type==='dir') : [];      if(!isAdmin){
         const myFolder = AUTH.firstName + ' ' + AUTH.lastName;
         userFolders = userFolders.filter(f=>f.name === myFolder);
       }
@@ -3112,14 +3108,14 @@ async function loadDashboard(){
     for(const userFolder of userFolders){
       let projectFolders = [];
       try {
-        const data = await githubRequest('GET', `Projects/${encodeURIComponent(userFolder.name)}`);
+        const data = await githubRequest('GET', `Projects/${userFolder.name}`);
         projectFolders = Array.isArray(data) ? data.filter(f=>f.type==='dir') : [];
       } catch(e){ continue; }
 
       const projects = [];
       for(const pf of projectFolders){
         try {
-          const jData = await githubRequest('GET', `Projects/${encodeURIComponent(userFolder.name)}/${encodeURIComponent(pf.name)}/project.json`);
+          const jData = await githubRequest('GET', `Projects/${userFolder.name}/${pf.name}/project.json`);
           const snap = JSON.parse(atob(jData.content.replace(/\n/g,'')));
           projects.push({ snap, sha: jData.sha, folderName: pf.name, userName: userFolder.name });
         } catch(e){ continue; }
@@ -3264,7 +3260,7 @@ function openProject(snapJson){
 async function deleteProject(userName, folderName){
   if(!confirm(`Delete project "${folderName}" by ${userName}? This cannot be undone.`)) return;
   try {
-    const path = `Projects/${encodeURIComponent(userName)}/${encodeURIComponent(folderName)}/project.json`;
+    const path = `Projects/${userName}/${folderName}/project.json`;
     const fileData = await githubRequest('GET', path);
     await githubRequest('DELETE', path, {
       message: `Delete project: ${folderName}`,
