@@ -1,4 +1,4 @@
-var https = require('https');
+var fetchFn = globalThis.fetch;
 
 module.exports = async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -27,61 +27,37 @@ module.exports = async function handler(req, res) {
     return res.status(403).json({ error: 'Path not allowed: ' + path });
   }
 
-  // Build path — encode each segment individually, preserve slashes
-  var encodedPath = decoded.split('/').map(function(s) {
-    return s.replace(/ /g, '%20')
-            .replace(/\[/g, '%5B')
-            .replace(/\]/g, '%5D')
-            .replace(/#/g, '%23')
-            .replace(/\?/g, '%3F');
-  }).join('/');
+  // Pass the path directly to GitHub API URL — no re-encoding
+  // The URL constructor handles encoding correctly
+  var baseUrl = 'https://api.github.com/repos/' + GITHUB_REPO + '/contents/';
+  var fullUrl = new URL(baseUrl + decoded);
 
-  var apiPath = '/repos/' + GITHUB_REPO + '/contents/' + encodedPath;
+  var opts = {
+    method: method,
+    headers: {
+      'Authorization': 'Bearer ' + GITHUB_PAT,
+      'Accept':        'application/vnd.github+json',
+      'Content-Type':  'application/json',
+      'User-Agent':    'insightech'
+    }
+  };
 
-  var bodyStr = null;
   if ((method === 'PUT' || method === 'DELETE') && reqBody) {
     if (reqBody.rawContent !== undefined) {
       reqBody.content = Buffer.from(reqBody.rawContent, 'utf8').toString('base64');
       delete reqBody.rawContent;
     }
     reqBody.branch = reqBody.branch || GITHUB_BRANCH;
-    bodyStr = JSON.stringify(reqBody);
+    opts.body = JSON.stringify(reqBody);
   }
 
-  // Use Node.js https module directly — no fetch, no re-encoding
-  return new Promise(function(resolve) {
-    var options = {
-      hostname: 'api.github.com',
-      port: 443,
-      path: apiPath,
-      method: method,
-      headers: {
-        'Authorization': 'Bearer ' + GITHUB_PAT,
-        'Accept':        'application/vnd.github+json',
-        'Content-Type':  'application/json',
-        'User-Agent':    'insightech',
-        'Content-Length': bodyStr ? Buffer.byteLength(bodyStr) : 0
-      }
-    };
-
-    var req2 = https.request(options, function(ghRes) {
-      var chunks = [];
-      ghRes.on('data', function(chunk) { chunks.push(chunk); });
-      ghRes.on('end', function() {
-        var text = Buffer.concat(chunks).toString();
-        var data;
-        try { data = JSON.parse(text); } catch(e) { data = { raw: text }; }
-        res.status(ghRes.statusCode).json(data);
-        resolve();
-      });
-    });
-
-    req2.on('error', function(err) {
-      res.status(500).json({ error: err.message });
-      resolve();
-    });
-
-    if (bodyStr) req2.write(bodyStr);
-    req2.end();
-  });
+  try {
+    var ghRes = await fetchFn(fullUrl.toString(), opts);
+    var text  = await ghRes.text();
+    var data;
+    try { data = JSON.parse(text); } catch(e) { data = { raw: text }; }
+    return res.status(ghRes.status).json(data);
+  } catch(err) {
+    return res.status(500).json({ error: err.message });
+  }
 };
