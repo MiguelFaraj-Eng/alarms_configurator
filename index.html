@@ -3145,11 +3145,18 @@ function tryUsers(){
 //  PROJECTS — SAVE / LOAD / DASHBOARD
 // ══════════════════════════════════════════════════
 
-function getProjectPath(username, projectRef){
-  // Projects/<Full Name>/<ProjectRef>/project.json
-  const safeName = username.replace(/[^a-zA-Z0-9 _-]/g,'').trim();
-  const safeRef  = projectRef.replace(/[^a-zA-Z0-9._-]/g,'').trim() || 'unnamed';
-  return `Projects/${safeName}/${safeRef}/project.json`;
+function getProjectPath(firstName, lastName, projectRef){
+  // Path: Projects/<FirstName LastName>/<ProjectRef>/project.json
+  // GitHub API creates intermediate folders automatically when you PUT a file
+  // We encode each segment separately for the API URL but store the readable path
+  const userName = `${firstName} ${lastName}`.trim();
+  const safeRef  = (projectRef||'unnamed').trim();
+  return {
+    display : `Projects/${userName}/${safeRef}/project.json`,
+    encoded : `Projects/${encodeURIComponent(userName)}/${encodeURIComponent(safeRef)}/project.json`,
+    userName,
+    projectRef: safeRef
+  };
 }
 
 function buildProjectSnapshot(){
@@ -3225,26 +3232,28 @@ async function saveProjectToGitHub(){
 
   try {
     const snapshot = buildProjectSnapshot();
-    const path = getProjectPath(AUTH.firstName + ' ' + AUTH.lastName, ref);
+    const pathObj = getProjectPath(AUTH.firstName, AUTH.lastName, ref);
     const jsonStr = JSON.stringify(snapshot, null, 2);
     const b64 = btoa(unescape(encodeURIComponent(jsonStr)));
 
     // Check if file already exists (need sha for update)
     let sha = undefined;
     try {
-      const existing = await githubGetFile(path);
-      sha = existing.sha;
+      const existing = await fetch(`https://api.github.com/repos/${GITHUB_REPO}/contents/${pathObj.encoded}`,{
+        headers:{'Authorization':`Bearer ${getGithubPAT()}`,'Accept':'application/vnd.github+json'}
+      });
+      if(existing.ok){ const d = await existing.json(); sha = d.sha; }
     } catch(e){ /* new project */ }
 
     const body = {
       message: `Save project: ${ref} by ${AUTH.username}`,
       content: b64,
-      branch: GITHUB_BRANCH
+      branch : GITHUB_BRANCH
     };
     if(sha) body.sha = sha;
 
-    const res = await fetch(`https://api.github.com/repos/${GITHUB_REPO}/contents/${path}`,{
-      method:'PUT',
+    const res = await fetch(`https://api.github.com/repos/${GITHUB_REPO}/contents/${pathObj.encoded}`,{
+      method :'PUT',
       headers:{
         'Authorization':`Bearer ${getGithubPAT()}`,
         'Accept':'application/vnd.github+json',
@@ -3256,7 +3265,7 @@ async function saveProjectToGitHub(){
       const err = await res.json().catch(()=>({}));
       throw new Error(`${res.status} — ${err.message||res.statusText}`);
     }
-    toast(`Project "${ref}" saved to GitHub ✓`,'success');
+    toast(`Project "${ref}" saved to GitHub ✓`);
   } catch(e){
     toast('Save failed: ' + e.message,'err');
   } finally {
@@ -3456,10 +3465,13 @@ function openProject(snapJson){
 async function deleteProject(userName, folderName){
   if(!confirm(`Delete project "${folderName}" by ${userName}? This cannot be undone.`)) return;
   try {
-    // Need to delete project.json file (GitHub API requires file sha to delete)
-    const path = `Projects/${userName}/${folderName}/project.json`;
-    const fileData = await githubGetFile(path);
-    const res = await fetch(`https://api.github.com/repos/${GITHUB_REPO}/contents/${path}`,{
+    const encodedPath = `Projects/${encodeURIComponent(userName)}/${encodeURIComponent(folderName)}/project.json`;
+    const fileRes = await fetch(`https://api.github.com/repos/${GITHUB_REPO}/contents/${encodedPath}`,{
+      headers:{'Authorization':`Bearer ${getGithubPAT()}`,'Accept':'application/vnd.github+json'}
+    });
+    if(!fileRes.ok) throw new Error(`Could not find file: ${fileRes.status}`);
+    const fileData = await fileRes.json();
+    const res = await fetch(`https://api.github.com/repos/${GITHUB_REPO}/contents/${encodedPath}`,{
       method:'DELETE',
       headers:{
         'Authorization':`Bearer ${getGithubPAT()}`,
@@ -3474,7 +3486,7 @@ async function deleteProject(userName, folderName){
     });
     if(!res.ok){ const e=await res.json().catch(()=>({})); throw new Error(e.message||res.statusText); }
     toast(`Project "${folderName}" deleted ✓`);
-    loadDashboard(); // refresh
+    loadDashboard();
   } catch(e){
     toast('Delete failed: '+e.message,'err');
   }
