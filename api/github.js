@@ -12,27 +12,7 @@ module.exports = async function handler(req, res) {
   if (!GITHUB_PAT) return res.status(500).json({ error: 'GITHUB_PAT not set' });
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed. Use POST.' });
 
-  // Parse body — handle both pre-parsed object and raw string
-  var payload;
-  try {
-    if (typeof req.body === 'object' && req.body !== null) {
-      payload = req.body;
-    } else if (typeof req.body === 'string') {
-      payload = JSON.parse(req.body);
-    } else {
-      // Read raw body stream
-      var rawBody = await new Promise(function(resolve, reject) {
-        var chunks = [];
-        req.on('data', function(chunk) { chunks.push(chunk); });
-        req.on('end', function() { resolve(Buffer.concat(chunks).toString()); });
-        req.on('error', reject);
-      });
-      payload = JSON.parse(rawBody);
-    }
-  } catch(e) {
-    return res.status(400).json({ error: 'Body parse error: ' + e.message });
-  }
-
+  var payload = req.body || {};
   var method  = (payload.method || 'GET').toUpperCase();
   var path    = payload.path || '';
   var reqBody = payload.body || null;
@@ -41,11 +21,12 @@ module.exports = async function handler(req, res) {
 
   var decoded  = decodeURIComponent(path);
   var allowed  = ['data/', 'Projects/', 'Projects', 'assets/avatars/', 'assets/avatars'];
-  var ok       = allowed.some(function(p){ return decoded === p || decoded.startsWith(p); });
-  if (!ok) return res.status(403).json({ error: 'Path not allowed: ' + path });
+  if (!allowed.some(function(p){ return decoded === p || decoded.startsWith(p); })) {
+    return res.status(403).json({ error: 'Path not allowed: ' + path });
+  }
 
   var segments = decoded.split('/').map(function(s){ return encodeURIComponent(s); }).join('/');
-  var url      = 'https://api.github.com/repos/' + GITHUB_REPO + '/contents/' + segments;
+  var url = 'https://api.github.com/repos/' + GITHUB_REPO + '/contents/' + segments;
 
   var opts = {
     method: method,
@@ -58,7 +39,13 @@ module.exports = async function handler(req, res) {
   };
 
   if ((method === 'PUT' || method === 'DELETE') && reqBody) {
-    reqBody.branch = GITHUB_BRANCH;
+    // If rawContent is provided, base64 encode it server-side
+    // This avoids sending large base64 strings through the proxy
+    if (reqBody.rawContent) {
+      reqBody.content = Buffer.from(reqBody.rawContent).toString('base64');
+      delete reqBody.rawContent;
+    }
+    reqBody.branch = reqBody.branch || GITHUB_BRANCH;
     opts.body = JSON.stringify(reqBody);
   }
 
@@ -69,6 +56,6 @@ module.exports = async function handler(req, res) {
     try { data = JSON.parse(text); } catch(e) { data = { raw: text }; }
     return res.status(ghRes.status).json(data);
   } catch(err) {
-    return res.status(500).json({ error: err.message, url: url });
+    return res.status(500).json({ error: err.message });
   }
 };
