@@ -423,9 +423,9 @@ html.light .login-logo{filter:none;}
           </div>
         </div>
         <div class="user-dd-item" onclick="closeUserMenu();goPage('project')">🏠 Dashboard</div>
-        <div class="user-dd-item" onclick="closeUserMenu();openEditProfile()">✏️ Edit Profile</div>
-        <div class="user-dd-item" id="ddSettingsItem" onclick="closeUserMenu();trySettings()">⚙ Settings</div>
-        <div class="user-dd-item" id="ddUsersItem" style="display:none" onclick="closeUserMenu();tryUsers()">👥 User Management</div>
+        <div class="user-dd-item" onclick="closeUserMenu();setTimeout(openEditProfile,50)">✏️ Edit Profile</div>
+        <div class="user-dd-item" id="ddSettingsItem" onclick="closeUserMenu();setTimeout(trySettings,50)">⚙ Settings</div>
+        <div class="user-dd-item" id="ddUsersItem" style="display:none" onclick="closeUserMenu();setTimeout(tryUsers,50)">👥 User Management</div>
         <div class="user-dd-item danger" onclick="doAppLogout()">⏻ Sign Out</div>
       </div>
     </div>
@@ -749,13 +749,12 @@ html.light .login-logo{filter:none;}
       <div class="fg"><label>Phone (with country code)</label><input type="tel" id="ep-phone" placeholder="+961 70 000 000"></div>
       <div class="fg"><label>Avatar filename (in assets/avatars/)</label><input type="text" id="ep-picture" placeholder="yourname.jpg"></div>
       <div style="border-top:1px solid var(--border);padding-top:14px;margin-top:2px">
-        <div style="font-size:11px;font-weight:600;color:var(--text);margin-bottom:10px">Change Password</div>
-        <div class="fg" style="margin-bottom:10px"><label>Current Password</label><input type="password" id="ep-currentPass" placeholder="Enter current password"></div>
-        <div class="form-row">
-          <div class="fg"><label>New Password</label><input type="password" id="ep-newPass" placeholder="New password"></div>
-          <div class="fg"><label>Confirm New</label><input type="password" id="ep-confirmPass" placeholder="Confirm password"></div>
+        <div style="font-size:11px;font-weight:600;color:var(--text);margin-bottom:6px">Password</div>
+        <div style="font-size:11px;color:var(--text2);background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:10px 12px;margin-bottom:10px;line-height:1.6">
+          Passwords are managed in <code style="font-family:'DM Mono',monospace;font-size:10px">users.json</code> on GitHub by the admin.<br>
+          To change your password, send a request to the admin and they will update it.
         </div>
-        <div id="ep-passErr" style="color:var(--red);font-size:11px;display:none;margin-top:4px"></div>
+        <button class="btn btn-outline btn-sm" onclick="requestMyPasswordReset()" style="width:100%">🔑 Request Password Reset from Admin</button>
       </div>
       <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:4px">
         <button class="btn btn-outline" onclick="closeOverlay('editProfileOverlay')">Cancel</button>
@@ -2562,63 +2561,53 @@ function openEditProfile(){
   const info = document.createElement('div');
   info.innerHTML = `<div style="font-weight:600;font-size:14px">${esc(AUTH.firstName)} ${esc(AUTH.lastName)}</div>
     <div style="font-size:11px;color:var(--text3);font-family:'DM Mono',monospace;margin-top:2px">${esc(AUTH.role)} · @${esc(AUTH.username)}</div>
-    <div style="font-size:11px;color:var(--text2);margin-top:4px">⚠ Changes are saved in your browser session.<br>To make them permanent, push the updated users.json to GitHub.</div>`;
+    <div style="font-size:11px;color:var(--text2);margin-top:4px">Changes to name, email, phone and avatar apply for this session only.<br>Contact the admin to make permanent updates in users.json.</div>`;
   sec.appendChild(info);
 
   openOverlay('editProfileOverlay');
 }
 
 async function saveProfile(){
-  const errEl = document.getElementById('ep-passErr');
-  errEl.style.display = 'none';
-
   const newFirst = document.getElementById('ep-firstName').value.trim();
   const newLast  = document.getElementById('ep-lastName').value.trim();
   const newEmail = document.getElementById('ep-email').value.trim();
   const newPhone = document.getElementById('ep-phone').value.trim();
   const newPic   = document.getElementById('ep-picture').value.trim();
-  const curPass  = document.getElementById('ep-currentPass').value;
-  const newPass  = document.getElementById('ep-newPass').value;
-  const confPass = document.getElementById('ep-confirmPass').value;
-
-  // Password change validation
-  if(newPass || curPass){
-    if(!curPass){ errEl.textContent='Enter your current password.'; errEl.style.display='block'; return; }
-    const curHash = await sha256(curPass);
-    if(curHash !== AUTH.passwordHash){ errEl.textContent='Current password is incorrect.'; errEl.style.display='block'; return; }
-    if(newPass.length < 8){ errEl.textContent='New password must be at least 8 characters.'; errEl.style.display='block'; return; }
-    if(newPass !== confPass){ errEl.textContent='New passwords do not match.'; errEl.style.display='block'; return; }
-    AUTH.passwordHash = await sha256(newPass);
-    AUTH.password = newPass;
-  }
 
   // Update AUTH session
-  AUTH.firstName = newFirst || AUTH.firstName;
-  AUTH.lastName  = newLast  || AUTH.lastName;
-  AUTH.email     = newEmail;
-  AUTH.phone     = newPhone;
-  AUTH.picture   = newPic;
+  if(newFirst) AUTH.firstName = newFirst;
+  if(newLast)  AUTH.lastName  = newLast;
+  AUTH.email   = newEmail;
+  AUTH.phone   = newPhone;
+  AUTH.picture = newPic;
   sessionStorage.setItem('ic_auth', JSON.stringify(AUTH));
 
   // Refresh UI
   renderHeaderAvatar();
   populateEngineerBanner();
   closeOverlay('editProfileOverlay');
-  toast('Profile updated ✓ — push users.json to GitHub to make permanent.');
+  toast('Profile updated for this session ✓');
+}
 
-  // Show updated JSON snippet for admin to copy
-  const updatedUser = {
-    username: AUTH.username,
-    passwordHash: AUTH.passwordHash,
-    password: AUTH.password||'',
-    role: AUTH.role,
-    firstName: AUTH.firstName,
-    lastName: AUTH.lastName,
-    email: AUTH.email,
-    phone: AUTH.phone,
-    picture: AUTH.picture
-  };
-  console.log('Updated user entry for users.json:', JSON.stringify(updatedUser, null, 2));
+function requestMyPasswordReset(){
+  if(!AUTH) return;
+  const adminEmail = (EMBEDDED_USERS.find(u=>u.role==='admin')||{}).email || 'miguel.faraj@insightech.com';
+  const subject = encodeURIComponent(`[Password Reset Request] ${AUTH.username}`);
+  const body = encodeURIComponent(
+`Hi Miguel,
+
+I would like to reset my password for the Insightech Alarms Configurator.
+
+Username: ${AUTH.username}
+Name: ${AUTH.firstName} ${AUTH.lastName}
+Email: ${AUTH.email||'(not set)'}
+
+Please update my password and send me the new credentials.
+
+Thank you`
+  );
+  window.open(`mailto:${adminEmail}?subject=${subject}&body=${body}`);
+  toast('Reset request opened in your email client ✓');
 }
 
 // ══════════════════════════════════════════════════
@@ -2777,7 +2766,9 @@ function initTheme(){
 // ══════════════════════════════════════════════════
 function openOverlay(id){ document.getElementById(id).classList.add('open'); }
 function closeOverlay(id){ document.getElementById(id).classList.remove('open'); }
-document.querySelectorAll('.overlay').forEach(o=>o.addEventListener('click',e=>{if(e.target===o) o.classList.remove('open');}));
+document.addEventListener('click', e => {
+  if(e.target.classList.contains('overlay')) e.target.classList.remove('open');
+});
 
 function toast(msg,type=''){
   const old=document.querySelector('.toast'); if(old) old.remove();
