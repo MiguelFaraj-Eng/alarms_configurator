@@ -2300,8 +2300,7 @@ function populateEngineerBanner(){
   // Mini avatar in banner
   const wrap = document.getElementById('projAvatarWrap');
   const initials = ((AUTH.firstName||'')[0]||'') + ((AUTH.lastName||'')[0]||'');
-  const savedAvatar = localStorage.getItem('ic_avatar_' + AUTH.username);
-  const imgSrc = savedAvatar || (AUTH.picture ? (REPO_BASE + 'assets/avatars/' + AUTH.picture) : '');
+  const imgSrc = AUTH.picture ? (REPO_BASE + 'assets/avatars/' + AUTH.picture) : '';
   if(imgSrc){
     const img = document.createElement('img');
     img.style.cssText = 'width:36px;height:36px;border-radius:50%;object-fit:cover;border:2px solid var(--border)';
@@ -2324,10 +2323,6 @@ function populateEngineerBanner(){
 }
 
 function onLoginSuccess(){
-  // Merge any locally saved profile changes (name, email, phone, passwordHash)
-  AUTH = loadProfileFromLocalStorage(AUTH);
-  sessionStorage.setItem('ic_auth', JSON.stringify(AUTH));
-
   // Populate engineer info on project page
   populateEngineerBanner();
   document.getElementById('userMenuWrap').style.display = 'flex';
@@ -2350,9 +2345,7 @@ function renderHeaderAvatar(){
   const ddWrap = document.getElementById('ddAvatar');
   const initials = ((AUTH.firstName||'')[0]||'') + ((AUTH.lastName||'')[0]||'');
 
-  // Priority: 1) locally uploaded base64, 2) GitHub avatar file
-  const savedAvatar = localStorage.getItem('ic_avatar_' + AUTH.username);
-  const imgSrc = savedAvatar || (AUTH.picture ? (REPO_BASE + 'assets/avatars/' + AUTH.picture) : '');
+  const imgSrc = AUTH.picture ? (REPO_BASE + 'assets/avatars/' + AUTH.picture) : '';
 
   function makeAvatar(cls, phCls, src, init, fallbackEl){
     if(src){
@@ -2676,16 +2669,9 @@ function openEditProfile(){
   const displayName = document.getElementById('ep-displayName');
   displayName.textContent = (AUTH.firstName||'') + ' ' + (AUTH.lastName||'');
 
-  const savedAvatar = localStorage.getItem('ic_avatar_' + AUTH.username);
   const initials = ((AUTH.firstName||'')[0]||'') + ((AUTH.lastName||'')[0]||'');
 
-  if(savedAvatar){
-    preview.innerHTML = '';
-    const img = document.createElement('img');
-    img.src = savedAvatar;
-    img.style.cssText = 'width:100%;height:100%;object-fit:cover';
-    preview.appendChild(img);
-  } else if(AUTH.picture){
+  if(AUTH.picture){
     preview.innerHTML = '';
     const img = document.createElement('img');
     img.src = REPO_BASE + 'assets/avatars/' + AUTH.picture;
@@ -2722,93 +2708,10 @@ function previewAvatar(event){
   reader.readAsDataURL(file);
 }
 
-async function saveProfile(){
-  const msgEl = document.getElementById('ep-passMsg');
-  msgEl.style.display = 'none';
 
-  const newFirst   = document.getElementById('ep-firstName').value.trim();
-  const newLast    = document.getElementById('ep-lastName').value.trim();
-  const newEmail   = document.getElementById('ep-email').value.trim();
-  const newPhone   = document.getElementById('ep-phone').value.trim();
-  const curPass    = document.getElementById('ep-currentPass').value;
-  const newPass    = document.getElementById('ep-newPass').value;
-  const confPass   = document.getElementById('ep-confirmPass').value;
-  const newAvatar  = document.getElementById('ep-avatarInput').dataset.base64 || null;
 
-  // Password change — only if user typed something
-  if(curPass || newPass || confPass){
-    if(!curPass){
-      msgEl.textContent = 'Enter your current password to change it.';
-      msgEl.style.display = 'block'; return;
-    }
-    const curHash = await sha256(curPass);
-    if(curHash !== AUTH.passwordHash){
-      msgEl.textContent = 'Current password is incorrect.';
-      msgEl.style.display = 'block'; return;
-    }
-    if(newPass.length < 8){
-      msgEl.textContent = 'New password must be at least 8 characters.';
-      msgEl.style.display = 'block'; return;
-    }
-    if(newPass !== confPass){
-      msgEl.textContent = 'New passwords do not match.';
-      msgEl.style.display = 'block'; return;
-    }
-    AUTH.passwordHash = await sha256(newPass);
-    AUTH.password = newPass;
 
-    // Save updated passwordHash to localStorage so it persists after refresh
-    saveProfileToLocalStorage(AUTH);
-    toast('Password changed ✓ — remember to update users.json in GitHub too.');
-  }
 
-  // Save avatar to localStorage (survives refresh, no GitHub needed)
-  if(newAvatar){
-    localStorage.setItem('ic_avatar_' + AUTH.username, newAvatar);
-  }
-
-  // Update AUTH
-  if(newFirst) AUTH.firstName = newFirst;
-  if(newLast)  AUTH.lastName  = newLast;
-  AUTH.email = newEmail;
-  AUTH.phone = newPhone;
-
-  sessionStorage.setItem('ic_auth', JSON.stringify(AUTH));
-  saveProfileToLocalStorage(AUTH);
-
-  // Refresh all UI that shows the user
-  renderHeaderAvatar();
-  populateEngineerBanner();
-
-  closeOverlay('editProfileOverlay');
-  toast('Profile saved ✓');
-}
-
-function saveProfileToLocalStorage(authObj){
-  try {
-    // Load all saved profiles, update this user's entry
-    const saved = JSON.parse(localStorage.getItem('ic_profiles') || '{}');
-    saved[authObj.username] = {
-      firstName:    authObj.firstName,
-      lastName:     authObj.lastName,
-      email:        authObj.email,
-      phone:        authObj.phone,
-      passwordHash: authObj.passwordHash,
-      password:     authObj.password || ''
-    };
-    localStorage.setItem('ic_profiles', JSON.stringify(saved));
-  } catch(e){}
-}
-
-function loadProfileFromLocalStorage(authObj){
-  // Merge any locally saved profile changes back into AUTH after login
-  try {
-    const saved = JSON.parse(localStorage.getItem('ic_profiles') || '{}');
-    const p = saved[authObj.username];
-    if(!p) return authObj;
-    return { ...authObj, ...p };
-  } catch(e){ return authObj; }
-}
 
 function requestMyPasswordReset(){
   if(!AUTH) return;
@@ -2881,34 +2784,18 @@ Thanks`
 }
 
 // ══════════════════════════════════════════════════
-//  GITHUB API — read & write users.json
+//  GITHUB API — all calls go through Vercel proxy
 // ══════════════════════════════════════════════════
 async function githubGetFile(path){
-  const res = await fetch(`https://api.github.com/repos/${GITHUB_REPO}/contents/${path}`, {
-    headers: {
-      'Authorization': `Bearer ${getGithubPAT()}`,
-      'Accept': 'application/vnd.github+json'
-    }
-  });
-  if(!res.ok) throw new Error(`GitHub GET failed: ${res.status} ${res.statusText}`);
-  return await res.json(); // { content (base64), sha, ... }
+  return await githubRequest('GET', path);
 }
 
 async function githubPutFile(path, contentBase64, sha, message){
-  const res = await fetch(`https://api.github.com/repos/${GITHUB_REPO}/contents/${path}`, {
-    method: 'PUT',
-    headers: {
-      'Authorization': `Bearer ${getGithubPAT()}`,
-      'Accept': 'application/vnd.github+json',
-      'Content-Type': 'application/json'
-    },
-    body: JSON.stringify({ message, content: contentBase64, sha, branch: GITHUB_BRANCH })
+  return await githubRequest('PUT', path, {
+    message,
+    content: contentBase64,
+    ...(sha ? { sha } : {})
   });
-  if(!res.ok){
-    const err = await res.json().catch(()=>({}));
-    throw new Error(`GitHub PUT failed: ${res.status} — ${err.message || res.statusText}`);
-  }
-  return await res.json();
 }
 
 async function saveUsersToGitHub(updatedUsers){
@@ -3141,9 +3028,6 @@ function buildProjectSnapshot(){
 }
 
 async function saveProjectToGitHub(){
-  if(!getGithubPAT()){
-    toast('GitHub token not set. Go to Settings → GitHub Token.','err'); return;
-  }
   const ref = (document.getElementById('projectRef')||{}).value||'';
   if(!ref){ toast('Enter a Project Reference first (Step 1).','err'); return; }
 
