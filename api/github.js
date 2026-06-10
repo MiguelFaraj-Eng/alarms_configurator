@@ -1,23 +1,16 @@
 /**
  * Insightech Alarms Configurator — GitHub API Proxy
  * Runs on Vercel. The GitHub PAT never leaves the server.
- *
- * All requests from the frontend hit:
- *   POST https://your-app.vercel.app/api/github
- *
- * Body: { method, path, body }
- *   method : GET | PUT | DELETE
- *   path   : e.g. "data/users.json" or "Projects/Miguel%20Faraj/SOT-060/project.json"
- *   body   : object (for PUT/DELETE), omitted for GET
  */
 
-const ALLOWED_ORIGIN = process.env.ALLOWED_ORIGIN || 'https://miguelfaraj-eng.github.io';
-const GITHUB_PAT     = process.env.GITHUB_PAT;
-const GITHUB_REPO    = process.env.GITHUB_REPO    || 'miguelfaraj-eng/alarms_configurator';
-const GITHUB_BRANCH  = process.env.GITHUB_BRANCH  || 'main';
+module.exports = async function handler(req, res) {
+  // Read env vars inside the handler so they're always fresh
+  const GITHUB_PAT    = process.env.GITHUB_PAT;
+  const GITHUB_REPO   = process.env.GITHUB_REPO   || 'miguelfaraj-eng/alarms_configurator';
+  const GITHUB_BRANCH = process.env.GITHUB_BRANCH || 'main';
+  const ALLOWED_ORIGIN= process.env.ALLOWED_ORIGIN|| 'https://miguelfaraj-eng.github.io';
 
-export default async function handler(req, res) {
-  // ── CORS ──────────────────────────────────────────────────────────────────
+  // ── CORS ────────────────────────────────────────────────────────────────────
   res.setHeader('Access-Control-Allow-Origin', ALLOWED_ORIGIN);
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
@@ -26,12 +19,12 @@ export default async function handler(req, res) {
     return res.status(204).end();
   }
 
-  // ── Auth check ────────────────────────────────────────────────────────────
+  // ── PAT check ───────────────────────────────────────────────────────────────
   if (!GITHUB_PAT) {
     return res.status(500).json({ error: 'GITHUB_PAT environment variable not set on Vercel.' });
   }
 
-  // ── Only accept POST from our frontend ───────────────────────────────────
+  // ── Only accept POST ────────────────────────────────────────────────────────
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed. Use POST.' });
   }
@@ -42,15 +35,25 @@ export default async function handler(req, res) {
     return res.status(400).json({ error: 'Missing required field: path' });
   }
 
-  // ── Security: only allow paths within the known repo structure ────────────
-  const allowedPrefixes = ['data/', 'Projects/', 'assets/avatars/'];
-  const isAllowed = allowedPrefixes.some(p => decodeURIComponent(path).startsWith(p));
+  // ── Security: only allow safe paths ─────────────────────────────────────────
+  const decoded = decodeURIComponent(path);
+  const allowedPrefixes = ['data/', 'Projects/', 'Projects', 'assets/avatars/', 'assets/avatars'];
+  const isAllowed = allowedPrefixes.some(p => decoded === p || decoded.startsWith(p));
   if (!isAllowed) {
     return res.status(403).json({ error: `Path not allowed: ${path}` });
   }
 
-  // ── Forward to GitHub API ─────────────────────────────────────────────────
-  const githubUrl = `https://api.github.com/repos/${GITHUB_REPO}/contents/${path}`;
+  // ── Forward to GitHub API ────────────────────────────────────────────────────
+  // Decode first, then build URL — prevents double-encoding of %20 etc.
+  const decodedPath = decoded; // already decoded above for security check
+  const encodedSegments = decodedPath.split('/').map(s => encodeURIComponent(s)).join('/');
+  const githubUrl = `https://api.github.com/repos/${GITHUB_REPO}/contents/${encodedSegments}`;
+  
+  // Debug — remove after testing
+  console.log('PATH RECEIVED:', path);
+  console.log('DECODED:', decodedPath);
+  console.log('ENCODED SEGMENTS:', encodedSegments);
+  console.log('GITHUB URL:', githubUrl);
 
   const fetchOptions = {
     method: method.toUpperCase(),
@@ -63,17 +66,20 @@ export default async function handler(req, res) {
   };
 
   if (['PUT', 'DELETE'].includes(fetchOptions.method) && reqBody) {
-    // Inject branch if not already present
-    const payload = { branch: GITHUB_BRANCH, ...reqBody };
-    fetchOptions.body = JSON.stringify(payload);
+    fetchOptions.body = JSON.stringify({ branch: GITHUB_BRANCH, ...reqBody });
   }
 
   try {
     const ghRes  = await fetch(githubUrl, fetchOptions);
     const ghData = await ghRes.json().catch(() => ({}));
-
+    // Add debug info to response temporarily
+    if(ghData && typeof ghData === 'object'){
+      ghData._debug_url = githubUrl;
+      ghData._debug_path_received = path;
+      ghData._debug_decoded = decodedPath;
+    }
     return res.status(ghRes.status).json(ghData);
   } catch (err) {
     return res.status(502).json({ error: 'GitHub API request failed: ' + err.message });
   }
-}
+};
