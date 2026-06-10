@@ -14,5 +14,221 @@
     "firstName": "Test",
     "lastName": "Engineer",
     "picture": ""
+  },
+  {
+    "username": "Abdo Sebaaly",
+    "passwordHash": "80ca306ac6e68366dd0a26125c9647e0c61fac6668cec6016f5fe30fb12e99bd",
+    "role": "engineer",
+    "firstName": "Test",
+    "lastName": "Engineer",
+    "picture": ""
+  },
+  {
+    "username": "Andrew Costantine",
+    "passwordHash": "80ca306ac6e68366dd0a26125c9647e0c61fac6668cec6016f5fe30fb12e99bd",
+    "role": "engineer",
+    "firstName": "Test",
+    "lastName": "Engineer",
+    "picture": ""
+  },
+  {
+    "username": "Anthony Abdallah",
+    "passwordHash": "80ca306ac6e68366dd0a26125c9647e0c61fac6668cec6016f5fe30fb12e99bd",
+    "role": "engineer",
+    "firstName": "Test",
+    "lastName": "Engineer",
+    "picture": ""
+  },
+  {
+    "username": "Anthony Achkar",
+    "passwordHash": "80ca306ac6e68366dd0a26125c9647e0c61fac6668cec6016f5fe30fb12e99bd",
+    "role": "engineer",
+    "firstName": "Test",
+    "lastName": "Engineer",
+    "picture": ""
+  },
+  {
+    "username": "Anthony Bteich",
+    "passwordHash": "80ca306ac6e68366dd0a26125c9647e0c61fac6668cec6016f5fe30fb12e99bd",
+    "role": "engineer",
+    "firstName": "Test",
+    "lastName": "Engineer",
+    "picture": ""
+  },
+  {
+    "username": "Antoine Daoud",
+    "passwordHash": "80ca306ac6e68366dd0a26125c9647e0c61fac6668cec6016f5fe30fb12e99bd",
+    "role": "engineer",
+    "firstName": "Test",
+    "lastName": "Engineer",
+    "picture": ""
+  },
+  {
+    "username": "Charbel Fakhoury",
+    "passwordHash": "80ca306ac6e68366dd0a26125c9647e0c61fac6668cec6016f5fe30fb12e99bd",
+    "role": "engineer",
+    "firstName": "Test",
+    "lastName": "Engineer",
+    "picture": ""
+  },
+  {
+    "username": "Claritta Lahoud",
+    "passwordHash": "80ca306ac6e68366dd0a26125c9647e0c61fac6668cec6016f5fe30fb12e99bd",
+    "role": "engineer",
+    "firstName": "Test",
+    "lastName": "Engineer",
+    "picture": ""
+  },
+  {
+    "username": "Eliane Jeitani",
+    "passwordHash": "80ca306ac6e68366dd0a26125c9647e0c61fac6668cec6016f5fe30fb12e99bd",
+    "role": "engineer",
+    "firstName": "Test",
+    "lastName": "Engineer",
+    "picture": ""
+  },
+  {
+    "username": "Elias Abi Doumit",
+    "passwordHash": "80ca306ac6e68366dd0a26125c9647e0c61fac6668cec6016f5fe30fb12e99bd",
+    "role": "engineer",
+    "firstName": "Test",
+    "lastName": "Engineer",
+    "picture": ""
+  },
+  {
+    "username": "Elie Sidnawy",
+    "passwordHash": "80ca306ac6e68366dd0a26125c9647e0c61fac6668cec6016f5fe30fb12e99bd",
+    "role": "engineer",
+    "firstName": "Test",
+    "lastName": "Engineer",
+    "picture": ""
+  },
+  {
+    "username": "Fady Elias",
+    "passwordHash": "80ca306ac6e68366dd0a26125c9647e0c61fac6668cec6016f5fe30fb12e99bd",
+    "role": "engineer",
+    "firstName": "Test",
+    "lastName": "Engineer",
+    "picture": ""
+  },
+  {
+    "username": "Georges A Eid",
+    "passwordHash": "80ca306ac6e68366dd0a26125c9647e0c61fac6668cec6016f5fe30fb12e99bd",
+    "role": "engineer",
+    "firstName": "Test",
+    "lastName": "Engineer",
+    "picture": ""
+  },
+  {
+    "username": "Georgio Nasr",
+    "passwordHash": "80ca306ac6e68366dd0a26125c9647e0c61fac6668cec6016f5fe30fb12e99bd",
+    "role": "engineer",
+    "firstName": "Test",
+    "lastName": "Engineer",
+    "picture": ""
+  },
+  {
+    "username": "Jad Mallah",
+    "passwordHash": "80ca306ac6e68366dd0a26125c9647e0c61fac6668cec6016f5fe30fb12e99bd",
+    "role": "engineer",
+    "firstName": "Test",
+    "lastName": "Engineer",
+    "picture": ""
+  },
+  {
+    "username": "Jennifer Haddad",
+    "passwordHash": "80ca306ac6e68366dd0a26125c9647e0c61fac6668cec6016f5fe30fb12e99bd",
+    "role": "engineer",
+    "firstName": "Test",
+    "lastName": "Engineer",
+    "picture": ""
+  },
+  {
+    "username": "Joe Nicolas",
+    "passwordHash": "80ca306ac6e68366dd0a26125c9647e0c61fac6668cec6016f5fe30fb12e99bd",
+    "role": "engineer",
+    "firstName": "Test",
+    "lastName": "Engineer",
+    "picture": ""
+  },
+  {
+    "username": "Karl Saliba",
+    "passwordHash": "80ca306ac6e68366dd0a26125c9647e0c61fac6668cec6016f5fe30fb12e99bd",
+    "role": "engineer",
+    "firstName": "Test",
+    "lastName": "Engineer",
+    "picture": ""
+  },
+  {
+    "username": "Kassem Rammal",
+    "passwordHash": "80ca306ac6e68366dd0a26125c9647e0c61fac6668cec6016f5fe30fb12e99bd",
+    "role": "engineer",
+    "firstName": "Test",
+    "lastName": "Engineer",
+    "picture": ""
+  },
+  {
+    "username": "Mario Khoury",
+    "passwordHash": "80ca306ac6e68366dd0a26125c9647e0c61fac6668cec6016f5fe30fb12e99bd",
+    "role": "engineer",
+    "firstName": "Test",
+    "lastName": "Engineer",
+    "picture": ""
+  },
+  {
+    "username": "Marwan Nehme",
+    "passwordHash": "80ca306ac6e68366dd0a26125c9647e0c61fac6668cec6016f5fe30fb12e99bd",
+    "role": "engineer",
+    "firstName": "Test",
+    "lastName": "Engineer",
+    "picture": ""
+  },
+  {
+    "username": "Miguel Kaboushe",
+    "passwordHash": "80ca306ac6e68366dd0a26125c9647e0c61fac6668cec6016f5fe30fb12e99bd",
+    "role": "engineer",
+    "firstName": "Test",
+    "lastName": "Engineer",
+    "picture": ""
+  },
+  {
+    "username": "Mike Sakr",
+    "passwordHash": "80ca306ac6e68366dd0a26125c9647e0c61fac6668cec6016f5fe30fb12e99bd",
+    "role": "engineer",
+    "firstName": "Test",
+    "lastName": "Engineer",
+    "picture": ""
+  },
+  {
+    "username": "Mohamad Fleifel",
+    "passwordHash": "80ca306ac6e68366dd0a26125c9647e0c61fac6668cec6016f5fe30fb12e99bd",
+    "role": "engineer",
+    "firstName": "Test",
+    "lastName": "Engineer",
+    "picture": ""
+  },
+  {
+    "username": "Peter Fakhry",
+    "passwordHash": "80ca306ac6e68366dd0a26125c9647e0c61fac6668cec6016f5fe30fb12e99bd",
+    "role": "engineer",
+    "firstName": "Test",
+    "lastName": "Engineer",
+    "picture": ""
+  },
+  {
+    "username": "Reve Fawaz",
+    "passwordHash": "80ca306ac6e68366dd0a26125c9647e0c61fac6668cec6016f5fe30fb12e99bd",
+    "role": "engineer",
+    "firstName": "Test",
+    "lastName": "Engineer",
+    "picture": ""
+  },
+  {
+    "username": "Simon Hantouch",
+    "passwordHash": "80ca306ac6e68366dd0a26125c9647e0c61fac6668cec6016f5fe30fb12e99bd",
+    "role": "engineer",
+    "firstName": "Test",
+    "lastName": "Engineer",
+    "picture": ""
   }
 ]
