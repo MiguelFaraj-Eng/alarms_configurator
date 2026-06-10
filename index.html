@@ -366,6 +366,25 @@ html.light .login-logo{filter:none;}
 .btn-icon.whatsapp:hover{background:var(--green-light);border-color:var(--green);color:var(--green);}
 .btn-icon.forgot:hover{background:var(--orange-light);border-color:var(--orange);color:var(--orange);}
 
+/* ── DASHBOARD ───────────────────────────────────────── */
+.dash-page{padding:28px;max-width:1100px;margin:0 auto;width:100%}
+.dash-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:24px;flex-wrap:wrap;gap:12px}
+.proj-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:14px}
+.proj-card{background:var(--surface);border:1px solid var(--border);border-radius:14px;overflow:hidden;transition:border-color .15s,box-shadow .15s;}
+.proj-card:hover{border-color:var(--accent);box-shadow:0 4px 20px rgba(0,0,0,.15)}
+.proj-card-header{padding:16px 18px 12px;border-bottom:1px solid var(--border);display:flex;align-items:flex-start;justify-content:space-between;gap:10px}
+.proj-ref{font-family:'DM Mono',monospace;font-size:10px;font-weight:600;letter-spacing:2px;color:var(--accent);text-transform:uppercase;margin-bottom:4px}
+.proj-name{font-size:14px;font-weight:700;line-height:1.3}
+.proj-client{font-size:11px;color:var(--text2);margin-top:3px}
+.proj-card-body{padding:12px 18px}
+.proj-meta{font-size:10px;color:var(--text3);display:flex;align-items:center;gap:4px;margin-bottom:4px}
+.proj-card-footer{display:flex;gap:6px;padding:10px 18px;border-top:1px solid var(--border);background:var(--surface2);align-items:center}
+.proj-stat{font-size:10px;font-weight:600;padding:3px 8px;border-radius:12px;background:var(--accent-light);color:var(--accent)}
+.dash-user-group{margin-bottom:28px}
+.dash-user-label{display:flex;align-items:center;gap:8px;margin-bottom:12px;padding-bottom:8px;border-bottom:1.5px solid var(--border)}
+.dash-user-avatar{width:28px;height:28px;border-radius:50%;background:var(--accent);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:#fff;flex-shrink:0}
+.dash-empty{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:60px 20px;gap:12px;color:var(--text3);text-align:center}
+.dash-empty-icon{font-size:48px;opacity:.35}
 </style>
 </head>
 <body>
@@ -421,6 +440,7 @@ html.light .login-logo{filter:none;}
     <div class="h-title">INSIGHTECH <span>ALARMS CONFIGURATOR</span></div>
   </div>
   <div class="h-steps">
+    <div class="h-step" id="tab-dashboard" onclick="tryNav('dashboard')"><div class="step-n">🏠</div>Dashboard</div>
     <div class="h-step active" id="tab-project" onclick="tryNav('project')"><div class="step-n">1</div>Project</div>
     <div class="h-step locked" id="tab-equipment" onclick="tryNav('equipment')"><div class="step-n">2</div>Equipment</div>
     <div class="h-step locked" id="tab-configure" onclick="tryNav('configure')"><div class="step-n">3</div>Configure</div>
@@ -444,7 +464,7 @@ html.light .login-logo{filter:none;}
             <div class="user-dd-role" id="ddRole"></div>
           </div>
         </div>
-        <div class="user-dd-item" onclick="closeUserMenu();goPage('project')">🏠 Dashboard</div>
+        <div class="user-dd-item" onclick="closeUserMenu();goDashboard()">🏠 My Projects</div>
         <div class="user-dd-item" onclick="closeUserMenu();setTimeout(openEditProfile,50)">✏️ Edit Profile</div>
         <div class="user-dd-item" id="ddSettingsItem" onclick="closeUserMenu();setTimeout(trySettings,50)">⚙ Settings</div>
         <div class="user-dd-item" id="ddUsersItem" style="display:none" onclick="closeUserMenu();setTimeout(tryUsers,50)">👥 User Management</div>
@@ -623,7 +643,22 @@ html.light .login-logo{filter:none;}
       </div>
       <div class="actions">
         <button class="btn btn-outline" onclick="goPage('configure')">← Back to Configure</button>
+        <button class="btn btn-primary" onclick="saveProjectToGitHub()" id="saveProjectBtn" style="display:flex;align-items:center;gap:6px">💾 Save Project to GitHub</button>
       </div>
+    </div>
+  </div>
+
+  <!-- PAGE: DASHBOARD -->
+  <div class="page" id="page-dashboard">
+    <div class="dash-page">
+      <div class="dash-header">
+        <div>
+          <div style="font-size:22px;font-weight:700">📁 My Projects</div>
+          <div style="font-size:12px;color:var(--text2);margin-top:3px" id="dashSubtitle">Loading projects…</div>
+        </div>
+        <button class="btn btn-primary" onclick="goPage('project');resetWizard()">+ New Project</button>
+      </div>
+      <div id="dashContent"></div>
     </div>
   </div>
 
@@ -1278,7 +1313,7 @@ function getAllAlarms(){
 // ══════════════════════════════════════════════════
 //  NAVIGATION
 // ══════════════════════════════════════════════════
-const TABS = ['project','equipment','configure','export','settings','users'];
+const TABS = ['dashboard','project','equipment','configure','export','settings','users'];
 const LOCK_MSG = {
   equipment:'Complete project info first.',
   configure:'Select at least one equipment item.',
@@ -1288,6 +1323,7 @@ const LOCK_MSG = {
 function tryNav(id){
   if(id==='settings'){ trySettings(); return; }
   if(id==='users'){ tryUsers(); return; }
+  if(id==='dashboard'){ goDashboard(); return; }
   if(!S.unlocked.has(id)){ toast(LOCK_MSG[id]||'Complete previous steps first.','err'); return; }
   goPage(id);
 }
@@ -1297,9 +1333,8 @@ function updateTabs(){
     const t = document.getElementById('tab-'+id);
     if(!t) return;
     t.classList.remove('active','locked','done');
-    if(!S.unlocked.has(id) && id!=='settings' && id!=='users') t.classList.add('locked');
+    if(!S.unlocked.has(id) && !['settings','users','dashboard'].includes(id)) t.classList.add('locked');
   });
-  // Hide settings tab for engineers
   const settingsTab = document.getElementById('tab-settings');
   if(settingsTab && AUTH && AUTH.role !== 'admin') settingsTab.style.display = 'none';
 }
@@ -2312,6 +2347,9 @@ function onLoginSuccess(){
 
   // Auto-load alarm DB from GitHub on login
   loadAlarmDBFromGitHub();
+
+  // Go to dashboard on login
+  setTimeout(()=>goDashboard(), 100);
 }
 
 function renderHeaderAvatar(){
@@ -3102,6 +3140,330 @@ function tryUsers(){
   goPage('users');
   renderUsersPage();
 }
+
+// ══════════════════════════════════════════════════
+//  PROJECTS — SAVE / LOAD / DASHBOARD
+// ══════════════════════════════════════════════════
+
+function getProjectPath(username, projectRef){
+  // Projects/<Full Name>/<ProjectRef>/project.json
+  const safeName = username.replace(/[^a-zA-Z0-9 _-]/g,'').trim();
+  const safeRef  = projectRef.replace(/[^a-zA-Z0-9._-]/g,'').trim() || 'unnamed';
+  return `Projects/${safeName}/${safeRef}/project.json`;
+}
+
+function buildProjectSnapshot(){
+  // Collect all form values
+  const info = {
+    projectName : (document.getElementById('projectName')||{}).value||'',
+    projectRef  : (document.getElementById('projectRef')||{}).value||'',
+    clientName  : (document.getElementById('clientName')||{}).value||'',
+    projectSite : (document.getElementById('projectSite')||{}).value||'',
+    projectNotes: (document.getElementById('projectNotes')||{}).value||'',
+    engineerName: AUTH.firstName + ' ' + AUTH.lastName,
+    engineerId  : AUTH.username,
+    projectDate : new Date().toISOString().split('T')[0]
+  };
+
+  // Serialize Sets and Maps
+  const selectedEq = [...S.selectedEq];
+  const quantities = {...S.quantities};
+
+  // entityAlarms: convert to plain object (remove non-serializable refs)
+  const entityAlarms = {};
+  Object.entries(S.entityAlarms).forEach(([k,arr])=>{
+    entityAlarms[k] = arr.map(a=>({...a}));
+  });
+
+  const commonAlarms = S.commonAlarms.map(a=>({...a}));
+  const customEquipment = S.customEquipment.map(e=>({...e}));
+
+  return {
+    version: 1,
+    savedAt: new Date().toISOString(),
+    savedBy: AUTH.username,
+    info,
+    selectedEq,
+    quantities,
+    entityAlarms,
+    commonAlarms,
+    customEquipment
+  };
+}
+
+async function saveProjectToGitHub(){
+  if(!getGithubPAT()){
+    toast('GitHub token not set. Go to Settings → GitHub Token.','err'); return;
+  }
+  const ref = (document.getElementById('projectRef')||{}).value||'';
+  if(!ref){ toast('Enter a Project Reference first (Step 1).','err'); return; }
+
+  const btn = document.getElementById('saveProjectBtn');
+  const origText = btn ? btn.innerHTML : '';
+  if(btn){ btn.innerHTML='⏳ Saving…'; btn.disabled=true; }
+
+  try {
+    const snapshot = buildProjectSnapshot();
+    const path = getProjectPath(AUTH.firstName + ' ' + AUTH.lastName, ref);
+    const jsonStr = JSON.stringify(snapshot, null, 2);
+    const b64 = btoa(unescape(encodeURIComponent(jsonStr)));
+
+    // Check if file already exists (need sha for update)
+    let sha = undefined;
+    try {
+      const existing = await githubGetFile(path);
+      sha = existing.sha;
+    } catch(e){ /* new project */ }
+
+    const body = {
+      message: `Save project: ${ref} by ${AUTH.username}`,
+      content: b64,
+      branch: GITHUB_BRANCH
+    };
+    if(sha) body.sha = sha;
+
+    const res = await fetch(`https://api.github.com/repos/${GITHUB_REPO}/contents/${path}`,{
+      method:'PUT',
+      headers:{
+        'Authorization':`Bearer ${getGithubPAT()}`,
+        'Accept':'application/vnd.github+json',
+        'Content-Type':'application/json'
+      },
+      body: JSON.stringify(body)
+    });
+    if(!res.ok){
+      const err = await res.json().catch(()=>({}));
+      throw new Error(`${res.status} — ${err.message||res.statusText}`);
+    }
+    toast(`Project "${ref}" saved to GitHub ✓`,'success');
+  } catch(e){
+    toast('Save failed: ' + e.message,'err');
+  } finally {
+    if(btn){ btn.innerHTML=origText; btn.disabled=false; }
+  }
+}
+
+async function goDashboard(){
+  goPage('dashboard');
+  await loadDashboard();
+}
+
+async function loadDashboard(){
+  const content = document.getElementById('dashContent');
+  const subtitle = document.getElementById('dashSubtitle');
+  content.innerHTML = '<div style="color:var(--text3);font-size:12px;padding:20px 0">Loading projects…</div>';
+
+  if(!getGithubPAT()){
+    content.innerHTML = `<div class="dash-empty"><div class="dash-empty-icon">🔑</div><div style="font-size:14px;font-weight:600">GitHub token not configured</div><div style="font-size:12px">Go to <button onclick="trySettings()" style="background:none;border:none;color:var(--accent);cursor:pointer;font-size:12px;text-decoration:underline;padding:0">Settings → GitHub Token</button> to set it up</div></div>`;
+    subtitle.textContent = '';
+    return;
+  }
+
+  try {
+    // List Projects/ directory
+    const isAdmin = AUTH.role === 'admin';
+    let userFolders = [];
+
+    try {
+      const res = await fetch(`https://api.github.com/repos/${GITHUB_REPO}/contents/Projects`,{
+        headers:{'Authorization':`Bearer ${getGithubPAT()}`,'Accept':'application/vnd.github+json'}
+      });
+      if(res.ok){
+        const all = await res.json();
+        userFolders = all.filter(f=>f.type==='dir');
+        if(!isAdmin){
+          const myFolder = AUTH.firstName + ' ' + AUTH.lastName;
+          userFolders = userFolders.filter(f=>f.name === myFolder);
+        }
+      } else if(res.status === 404){
+        userFolders = []; // Projects folder doesn't exist yet
+      } else {
+        throw new Error(`${res.status} ${res.statusText}`);
+      }
+    } catch(e){ throw e; }
+
+    if(!userFolders.length){
+      content.innerHTML = `<div class="dash-empty"><div class="dash-empty-icon">📂</div><div style="font-size:14px;font-weight:600">No projects yet</div><div style="font-size:12px">Complete the wizard and click <strong>Save Project to GitHub</strong> on the Export page</div></div>`;
+      subtitle.textContent = 'No projects found';
+      return;
+    }
+
+    // For each user folder, list project subfolders
+    let totalProjects = 0;
+    const groups = [];
+
+    for(const userFolder of userFolders){
+      const pRes = await fetch(`https://api.github.com/repos/${GITHUB_REPO}/contents/Projects/${encodeURIComponent(userFolder.name)}`,{
+        headers:{'Authorization':`Bearer ${getGithubPAT()}`,'Accept':'application/vnd.github+json'}
+      });
+      if(!pRes.ok) continue;
+      const projectFolders = (await pRes.json()).filter(f=>f.type==='dir');
+
+      const projects = [];
+      for(const pf of projectFolders){
+        try {
+          const jRes = await fetch(`https://api.github.com/repos/${GITHUB_REPO}/contents/Projects/${encodeURIComponent(userFolder.name)}/${encodeURIComponent(pf.name)}/project.json`,{
+            headers:{'Authorization':`Bearer ${getGithubPAT()}`,'Accept':'application/vnd.github+json'}
+          });
+          if(!jRes.ok) continue;
+          const jData = await jRes.json();
+          const snap = JSON.parse(atob(jData.content.replace(/\n/g,'')));
+          projects.push({ snap, sha: jData.sha, folderName: pf.name, userName: userFolder.name });
+        } catch(e){ continue; }
+      }
+      if(projects.length) groups.push({ userName: userFolder.name, projects });
+      totalProjects += projects.length;
+    }
+
+    subtitle.textContent = `${totalProjects} project${totalProjects!==1?'s':''} found`;
+
+    if(!groups.length){
+      content.innerHTML = `<div class="dash-empty"><div class="dash-empty-icon">📂</div><div style="font-size:14px;font-weight:600">No projects yet</div><div style="font-size:12px">Complete the wizard and click <strong>Save Project to GitHub</strong> on the Export page</div></div>`;
+      return;
+    }
+
+    content.innerHTML = '';
+    groups.forEach(group => {
+      const wrap = document.createElement('div');
+      wrap.style.marginBottom = '28px';
+
+      // User label (only show for admin viewing multiple users)
+      if(isAdmin && groups.length > 1){
+        const initials = group.userName.split(' ').map(w=>w[0]||'').join('').slice(0,2).toUpperCase();
+        const label = document.createElement('div');
+        label.className = 'dash-user-label';
+        label.innerHTML = `<div class="dash-user-avatar">${initials}</div><div style="font-size:13px;font-weight:600">${esc(group.userName)}</div><div style="font-size:11px;color:var(--text3);margin-left:4px">${group.projects.length} project${group.projects.length!==1?'s':''}</div>`;
+        wrap.appendChild(label);
+      }
+
+      const grid = document.createElement('div');
+      grid.className = 'proj-grid';
+
+      group.projects.forEach(({snap, sha, folderName, userName}) => {
+        const info = snap.info || {};
+        const eqCount = (snap.selectedEq||[]).length;
+        const date = info.projectDate || snap.savedAt?.split('T')[0] || '—';
+        const savedAt = snap.savedAt ? new Date(snap.savedAt).toLocaleString() : '—';
+
+        const card = document.createElement('div');
+        card.className = 'proj-card';
+        card.innerHTML = `
+          <div class="proj-card-header">
+            <div style="flex:1;min-width:0">
+              <div class="proj-ref">${esc(info.projectRef||folderName)}</div>
+              <div class="proj-name">${esc(info.projectName||'Untitled Project')}</div>
+              <div class="proj-client">${esc(info.clientName||'—')}</div>
+            </div>
+          </div>
+          <div class="proj-card-body">
+            <div class="proj-meta">📍 ${esc(info.projectSite||'—')}</div>
+            <div class="proj-meta">👤 ${esc(info.engineerName||userName)}</div>
+            <div class="proj-meta">💾 Last saved: ${esc(savedAt)}</div>
+          </div>
+          <div class="proj-card-footer">
+            <span class="proj-stat">${eqCount} equipment type${eqCount!==1?'s':''}</span>
+            <div style="margin-left:auto;display:flex;gap:6px">
+              <button class="btn btn-primary btn-sm" onclick="openProject(${JSON.stringify(JSON.stringify(snap))})">▶ Open</button>
+              <button class="btn btn-outline btn-sm" style="color:var(--red);border-color:var(--red)" onclick="deleteProject(${JSON.stringify(userName)},${JSON.stringify(folderName)})">🗑</button>
+            </div>
+          </div>`;
+        grid.appendChild(card);
+      });
+
+      wrap.appendChild(grid);
+      content.appendChild(wrap);
+    });
+
+  } catch(e){
+    content.innerHTML = `<div class="dash-empty"><div class="dash-empty-icon">⚠️</div><div style="font-size:14px;font-weight:600">Failed to load projects</div><div style="font-size:12px;color:var(--red)">${esc(e.message)}</div></div>`;
+    subtitle.textContent = 'Error loading';
+  }
+}
+
+function openProject(snapJson){
+  try {
+    const snap = JSON.parse(snapJson);
+    const info = snap.info || {};
+
+    // Restore project info fields
+    const set = (id,v)=>{ const el=document.getElementById(id); if(el) el.value=v||''; };
+    set('projectName',  info.projectName);
+    set('projectRef',   info.projectRef);
+    set('clientName',   info.clientName);
+    set('projectSite',  info.projectSite);
+    set('projectNotes', info.projectNotes);
+
+    // Restore state
+    S.selectedEq    = new Set(snap.selectedEq||[]);
+    S.quantities    = snap.quantities||{};
+    S.entityAlarms  = snap.entityAlarms||{};
+    S.commonAlarms  = snap.commonAlarms||[];
+    S.customEquipment = snap.customEquipment||[];
+
+    // Unlock all steps
+    S.unlocked = new Set(['project','equipment','configure','export']);
+    updateTabs();
+
+    // Render equipment checkboxes to reflect restored state
+    renderEquipment();
+
+    // Update sidebar stats
+    updateStats();
+
+    toast(`Project "${info.projectRef||'unknown'}" loaded ✓`);
+    goPage('configure');
+    renderConfigure();
+  } catch(e){
+    toast('Failed to open project: '+e.message,'err');
+  }
+}
+
+async function deleteProject(userName, folderName){
+  if(!confirm(`Delete project "${folderName}" by ${userName}? This cannot be undone.`)) return;
+  try {
+    // Need to delete project.json file (GitHub API requires file sha to delete)
+    const path = `Projects/${userName}/${folderName}/project.json`;
+    const fileData = await githubGetFile(path);
+    const res = await fetch(`https://api.github.com/repos/${GITHUB_REPO}/contents/${path}`,{
+      method:'DELETE',
+      headers:{
+        'Authorization':`Bearer ${getGithubPAT()}`,
+        'Accept':'application/vnd.github+json',
+        'Content-Type':'application/json'
+      },
+      body: JSON.stringify({
+        message:`Delete project: ${folderName}`,
+        sha: fileData.sha,
+        branch: GITHUB_BRANCH
+      })
+    });
+    if(!res.ok){ const e=await res.json().catch(()=>({})); throw new Error(e.message||res.statusText); }
+    toast(`Project "${folderName}" deleted ✓`);
+    loadDashboard(); // refresh
+  } catch(e){
+    toast('Delete failed: '+e.message,'err');
+  }
+}
+
+function resetWizard(){
+  // Reset state for a new project without clearing alarm DB
+  S.selectedEq    = new Set();
+  S.quantities    = {};
+  S.entityAlarms  = {};
+  S.commonAlarms  = [];
+  S.activeEntity  = null;
+  S.projectDone   = false;
+  S.eqDone        = false;
+  S.unlocked      = new Set(['project']);
+  updateTabs();
+  renderEquipment();
+  // Clear project form
+  ['projectName','projectRef','clientName','projectSite','projectNotes'].forEach(id=>{
+    const el = document.getElementById(id); if(el) el.value='';
+  });
+  populateEngineerBanner();
+}
+
 
 function doLogin(){} // legacy stub
 
