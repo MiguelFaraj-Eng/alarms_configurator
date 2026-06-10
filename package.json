@@ -2,9 +2,6 @@
   "name": "insightech-api",
   "version": "1.0.0",
   "engines": {
-    "node": "18.x"
-  },
-  "dependencies": {
-    "node-fetch": "^2.7.0"
+    "node": "24.x"
   }
 }
