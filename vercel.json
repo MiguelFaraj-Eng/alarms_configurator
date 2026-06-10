@@ -1,17 +1,10 @@
 {
   "functions": {
     "api/github.js": {
-      "maxDuration": 15
+      "maxDuration": 30
     }
   },
-  "headers": [
-    {
-      "source": "/api/(.*)",
-      "headers": [
-        { "key": "Access-Control-Allow-Origin",  "value": "https://miguelfaraj-eng.github.io" },
-        { "key": "Access-Control-Allow-Methods", "value": "GET, POST, OPTIONS" },
-        { "key": "Access-Control-Allow-Headers", "value": "Content-Type" }
-      ]
-    }
+  "routes": [
+    { "src": "/api/(.*)", "dest": "/api/$1" }
   ]
 }
