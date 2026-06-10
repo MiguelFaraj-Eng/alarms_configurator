@@ -4,7 +4,6 @@
  */
 
 module.exports = async function handler(req, res) {
-  // Read env vars inside the handler so they're always fresh
   const GITHUB_PAT    = process.env.GITHUB_PAT;
   const GITHUB_REPO   = process.env.GITHUB_REPO   || 'miguelfaraj-eng/alarms_configurator';
   const GITHUB_BRANCH = process.env.GITHUB_BRANCH || 'main';
@@ -43,9 +42,8 @@ module.exports = async function handler(req, res) {
     return res.status(403).json({ error: `Path not allowed: ${path}` });
   }
 
-  // ── Forward to GitHub API ────────────────────────────────────────────────────
-  const encodedSegments = decodedPath.split('/').map(s => encodeURIComponent(s)).join('/');
-  const githubUrl = `https://api.github.com/repos/${GITHUB_REPO}/contents/${encodedSegments}`;
+  // ── Build GitHub URL — encode each segment individually ──────────────────────
+  const githubUrl = `https://api.github.com/repos/${GITHUB_REPO}/contents/${decoded.split('/').map(s => encodeURIComponent(s)).join('/')}`;
 
   const fetchOptions = {
     method: method.toUpperCase(),
@@ -66,10 +64,6 @@ module.exports = async function handler(req, res) {
     const ghData = await ghRes.json().catch(() => ({}));
     return res.status(ghRes.status).json(ghData);
   } catch (err) {
-    return res.status(502).json({ 
-      error: 'GitHub API request failed: ' + err.message,
-      url: githubUrl,
-      method: fetchOptions.method
-    });
+    return res.status(502).json({ error: 'GitHub API request failed: ' + err.message });
   }
 };
