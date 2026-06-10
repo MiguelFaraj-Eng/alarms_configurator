@@ -3169,14 +3169,15 @@ function buildProjectSnapshot(){
   const selectedEq = [...S.selectedEq];
   const quantities = {...S.quantities};
 
-  // entityAlarms: convert to plain object (remove non-serializable refs)
+  // entityAlarms: convert to plain object safely
   const entityAlarms = {};
-  Object.entries(S.entityAlarms).forEach(([k,arr])=>{
+  Object.entries(S.entityAlarms).forEach(([k,val])=>{
+    const arr = Array.isArray(val) ? val : (val ? Object.values(val) : []);
     entityAlarms[k] = arr.map(a=>({...a}));
   });
 
-  const commonAlarms = S.commonAlarms.map(a=>({...a}));
-  const customEquipment = S.customEquipment.map(e=>({...e}));
+  const commonAlarms = Array.isArray(S.commonAlarms) ? S.commonAlarms.map(a=>({...a})) : [];
+  const customEquipment = Array.isArray(S.customEquipment) ? S.customEquipment.map(e=>({...e})) : [];
 
   return {
     version: 1,
@@ -3393,12 +3394,19 @@ function openProject(snapJson){
     set('projectSite',  info.projectSite);
     set('projectNotes', info.projectNotes);
 
-    // Restore state
-    S.selectedEq    = new Set(snap.selectedEq||[]);
-    S.quantities    = snap.quantities||{};
-    S.entityAlarms  = snap.entityAlarms||{};
-    S.commonAlarms  = snap.commonAlarms||[];
-    S.customEquipment = snap.customEquipment||[];
+    // Restore state — guard against shape mismatches
+    S.selectedEq    = new Set(Array.isArray(snap.selectedEq) ? snap.selectedEq : []);
+    S.quantities    = (snap.quantities && typeof snap.quantities==='object') ? snap.quantities : {};
+    S.commonAlarms  = Array.isArray(snap.commonAlarms) ? snap.commonAlarms : [];
+    S.customEquipment = Array.isArray(snap.customEquipment) ? snap.customEquipment : [];
+
+    // Restore entityAlarms — ensure each value is an array
+    S.entityAlarms = {};
+    if(snap.entityAlarms && typeof snap.entityAlarms==='object'){
+      Object.entries(snap.entityAlarms).forEach(([k,v])=>{
+        S.entityAlarms[k] = Array.isArray(v) ? v : [];
+      });
+    }
 
     // Unlock all steps
     S.unlocked = new Set(['project','equipment','configure','export']);
