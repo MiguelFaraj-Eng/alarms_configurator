@@ -3169,15 +3169,35 @@ function buildProjectSnapshot(){
   const selectedEq = [...S.selectedEq];
   const quantities = {...S.quantities};
 
-  // entityAlarms: convert to plain object safely
+  // entityAlarms: each value is {eqName, eqCat, idx, total, alarmGroups:[{alarmType, category, alarms:[...]}]}
   const entityAlarms = {};
-  Object.entries(S.entityAlarms).forEach(([k,val])=>{
-    const arr = Array.isArray(val) ? val : (val ? Object.values(val) : []);
-    entityAlarms[k] = arr.map(a=>({...a}));
+  Object.entries(S.entityAlarms).forEach(([k, entity]) => {
+    if(!entity || typeof entity !== 'object') return;
+    entityAlarms[k] = {
+      eqName  : entity.eqName  || '',
+      eqCat   : entity.eqCat   || '',
+      idx     : entity.idx     || 0,
+      total   : entity.total   || 1,
+      alarmGroups: Array.isArray(entity.alarmGroups)
+        ? entity.alarmGroups.map(g => ({
+            alarmType : g.alarmType  || '',
+            category  : g.category   || '',
+            alarms    : Array.isArray(g.alarms)
+              ? g.alarms.map(a => ({
+                  name    : a.name     || '',
+                  desc    : a.desc     || '',
+                  value   : a.value    || '',
+                  priority: a.priority ?? null,
+                  deleted : !!a.deleted
+                }))
+              : []
+          }))
+        : []
+    };
   });
 
-  const commonAlarms = Array.isArray(S.commonAlarms) ? S.commonAlarms.map(a=>({...a})) : [];
-  const customEquipment = Array.isArray(S.customEquipment) ? S.customEquipment.map(e=>({...e})) : [];
+  const commonAlarms    = Array.isArray(S.commonAlarms)     ? S.commonAlarms.map(a=>({...a}))    : [];
+  const customEquipment = Array.isArray(S.customEquipment)  ? S.customEquipment.map(e=>({...e})) : [];
 
   return {
     version: 1,
@@ -3395,16 +3415,23 @@ function openProject(snapJson){
     set('projectNotes', info.projectNotes);
 
     // Restore state — guard against shape mismatches
-    S.selectedEq    = new Set(Array.isArray(snap.selectedEq) ? snap.selectedEq : []);
-    S.quantities    = (snap.quantities && typeof snap.quantities==='object') ? snap.quantities : {};
-    S.commonAlarms  = Array.isArray(snap.commonAlarms) ? snap.commonAlarms : [];
+    S.selectedEq      = new Set(Array.isArray(snap.selectedEq) ? snap.selectedEq : []);
+    S.quantities      = (snap.quantities && typeof snap.quantities==='object') ? snap.quantities : {};
+    S.commonAlarms    = Array.isArray(snap.commonAlarms)    ? snap.commonAlarms    : [];
     S.customEquipment = Array.isArray(snap.customEquipment) ? snap.customEquipment : [];
 
-    // Restore entityAlarms — ensure each value is an array
+    // Restore entityAlarms — must be {eqName,eqCat,idx,total,alarmGroups}
     S.entityAlarms = {};
     if(snap.entityAlarms && typeof snap.entityAlarms==='object'){
-      Object.entries(snap.entityAlarms).forEach(([k,v])=>{
-        S.entityAlarms[k] = Array.isArray(v) ? v : [];
+      Object.entries(snap.entityAlarms).forEach(([k,entity])=>{
+        if(!entity || typeof entity !== 'object') return;
+        S.entityAlarms[k] = {
+          eqName     : entity.eqName  || '',
+          eqCat      : entity.eqCat   || '',
+          idx        : entity.idx     || 0,
+          total      : entity.total   || 1,
+          alarmGroups: Array.isArray(entity.alarmGroups) ? entity.alarmGroups : []
+        };
       });
     }
 
