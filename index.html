@@ -667,30 +667,6 @@ html.light .login-logo{filter:none;}
     <div style="padding:28px;max-width:960px;margin:0 auto;width:100%">
       <div style="font-size:20px;font-weight:700;margin-bottom:20px;">⚙ Alarm Database &amp; Settings</div>
 
-      <!-- GitHub Token Setup -->
-      <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;overflow:hidden;margin-bottom:24px" id="githubTokenCard">
-        <div style="padding:14px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px">
-          <div style="width:32px;height:32px;border-radius:8px;background:var(--purple-light);display:flex;align-items:center;justify-content:center;font-size:15px;flex-shrink:0">🔑</div>
-          <div style="flex:1">
-            <div style="font-size:13px;font-weight:600">GitHub Personal Access Token</div>
-            <div style="font-size:11px;color:var(--text2)" id="patStatusLine">Required for saving profile changes and uploading photos directly to GitHub</div>
-          </div>
-          <div id="patStatusBadge" style="font-size:10px;font-weight:700;padding:3px 10px;border-radius:20px;background:var(--red-light);color:var(--red)">NOT SET</div>
-        </div>
-        <div style="padding:16px 20px">
-          <div style="font-size:11px;color:var(--text2);margin-bottom:10px;line-height:1.6">
-            Create a token at <strong>GitHub → Settings → Developer Settings → Personal Access Tokens → Fine-grained</strong>.<br>
-            Select repo <code style="font-family:'DM Mono',monospace;background:var(--surface2);padding:1px 5px;border-radius:3px">alarms_configurator</code> · Permission: <strong>Contents — Read &amp; Write</strong>
-          </div>
-          <div style="display:flex;gap:8px;align-items:center">
-            <input type="password" id="patInput" placeholder="ghp_xxxxxxxxxxxxxxxxxxxx" style="flex:1;padding:8px 12px;border-radius:8px;border:1.5px solid var(--border);background:var(--surface2);color:var(--text);font-family:'DM Mono',monospace;font-size:12px;outline:none" onfocus="this.type='text'" onblur="this.type='password'">
-            <button class="btn btn-primary btn-sm" onclick="savePAT()">Save Token</button>
-            <button class="btn btn-outline btn-sm" onclick="clearPAT()" style="color:var(--red);border-color:var(--red)">Clear</button>
-          </div>
-          <div id="patTestResult" style="font-size:11px;margin-top:8px;display:none"></div>
-        </div>
-      </div>
-
       <!-- Import section inside settings -->
       <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;overflow:hidden;margin-bottom:24px">
         <div style="padding:14px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px">
@@ -824,12 +800,6 @@ html.light .login-logo{filter:none;}
         <div style="font-size:11px;color:var(--text2);margin-top:3px">Changes saved directly to GitHub</div>
       </div>
       <button class="btn btn-ghost btn-sm" onclick="closeOverlay('editProfileOverlay')" style="font-size:16px;padding:4px 8px">✕</button>
-    </div>
-
-    <!-- PAT warning -->
-    <div id="ep-patWarning" style="display:none;background:var(--orange-light);border:1px solid var(--orange);border-radius:8px;padding:10px 14px;font-size:11px;color:var(--text);margin-bottom:14px;line-height:1.6">
-      ⚠ <strong>GitHub token not set.</strong> Saving will fail.<br>
-      Go to <button onclick="closeOverlay('editProfileOverlay');setTimeout(trySettings,50)" style="background:none;border:none;cursor:pointer;color:var(--accent);font-size:11px;padding:0;text-decoration:underline">Settings → GitHub Token</button> to set it up first.
     </div>
 
     <!-- Avatar upload area -->
@@ -2220,14 +2190,37 @@ function loadCustomEqFromStorage(){
 // ══════════════════════════════════════════════════
 const REPO_BASE = "https://raw.githubusercontent.com/miguelfaraj-eng/alarms_configurator/main/";
 
-// ── GitHub API write config ─────────────────────────────────────────────────
-// The PAT is entered once by the admin in Settings and stored in localStorage.
-// You can also hardcode it here if you prefer (repo must be private).
-const GITHUB_REPO   = "miguelfaraj-eng/alarms_configurator";
+// ── GitHub proxy config ─────────────────────────────────────────────────────
+// The PAT lives in Vercel environment variables — never in this file.
+// Update VERCEL_API after you deploy the vercel-api project.
+const VERCEL_API = "https://insightech-api-pzap.vercel.app/api/github";
+const GITHUB_REPO   = "miguelfaraj-eng/alarms_configurator"; // kept for reference only
 const GITHUB_BRANCH = "main";
 
-function getGithubPAT(){
-  return localStorage.getItem('ic_github_pat') || '';
+function getGithubPAT(){ return null; } // PAT is on Vercel, not here
+
+// ── Proxy helper — replaces all direct GitHub fetch calls ──────────────────
+async function githubRequest(method, path, body){
+  const res = await fetch(VERCEL_API, {
+    method : 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body   : JSON.stringify({ method, path, body })
+  });
+  const data = await res.json().catch(()=>({}));
+  if(!res.ok) throw new Error(`GitHub ${method} failed: ${res.status} — ${data.message || data.error || res.statusText}`);
+  return data;
+}
+
+async function githubGetFile(path){
+  return await githubRequest('GET', path);
+}
+
+async function githubPutFile(path, contentBase64, sha, message){
+  return await githubRequest('PUT', path, {
+    message,
+    content: contentBase64,
+    ...(sha ? { sha } : {})
+  });
 }
 
 // ══════════════════════════════════════════════════
@@ -2667,16 +2660,6 @@ Insightech`
 function openEditProfile(){
   if(!AUTH) return;
 
-  // Show warning if PAT not configured
-  const patWarn = document.getElementById('ep-patWarning');
-  if(patWarn){
-    if(!getGithubPAT()){
-      patWarn.style.display = 'block';
-    } else {
-      patWarn.style.display = 'none';
-    }
-  }
-
   // Fill fields
   document.getElementById('ep-firstName').value   = AUTH.firstName  || '';
   document.getElementById('ep-lastName').value    = AUTH.lastName   || '';
@@ -2929,9 +2912,6 @@ async function githubPutFile(path, contentBase64, sha, message){
 }
 
 async function saveUsersToGitHub(updatedUsers){
-  if(!getGithubPAT()){
-    throw new Error('GitHub token not configured. Go to Settings → GitHub Token to set it up.');
-  }
   const jsonStr = JSON.stringify(updatedUsers, null, 2);
   const base64 = btoa(unescape(encodeURIComponent(jsonStr)));
   const file = await githubGetFile('data/users.json');
@@ -2999,33 +2979,22 @@ async function saveProfile(){
       currentJson[idx].password = newPass;
     }
 
-    // Upload avatar to GitHub as assets/avatars/<username>.jpg if provided
+    // Upload avatar if provided
     if(newAvatarB64){
       const avatarFilename = AUTH.username.replace(/\s+/g,'_').toLowerCase() + '.jpg';
-      const pureB64 = newAvatarB64.split(',')[1]; // strip data:image/...;base64,
+      const pureB64 = newAvatarB64.split(',')[1];
       let avatarSha = undefined;
       try {
-        const existing = await githubGetFile(`assets/avatars/${avatarFilename}`);
+        const existing = await githubRequest('GET', `assets/avatars/${avatarFilename}`);
         avatarSha = existing.sha;
-      } catch(e){ /* new file, no sha needed */ }
+      } catch(e){ /* new file */ }
 
-      const avatarRes = await fetch(`https://api.github.com/repos/${GITHUB_REPO}/contents/assets/avatars/${avatarFilename}`, {
-        method: 'PUT',
-        headers: {
-          'Authorization': `Bearer ${getGithubPAT()}`,
-          'Accept': 'application/vnd.github+json',
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          message: `Upload avatar for ${AUTH.username}`,
-          content: pureB64,
-          ...(avatarSha ? { sha: avatarSha } : {}),
-          branch: GITHUB_BRANCH
-        })
+      const avatarRes = await githubRequest('PUT', `assets/avatars/${avatarFilename}`, {
+        message: `Upload avatar for ${AUTH.username}`,
+        content: pureB64,
+        ...(avatarSha ? { sha: avatarSha } : {})
       });
-      if(avatarRes.ok){
-        currentJson[idx].picture = avatarFilename;
-      }
+      if(avatarRes) currentJson[idx].picture = avatarFilename;
     }
 
     // Write updated users.json back
@@ -3062,67 +3031,6 @@ async function saveProfile(){
 // ══════════════════════════════════════════════════
 //  SETTINGS PAGE ACCESS (role-gated)
 // ══════════════════════════════════════════════════
-// ══════════════════════════════════════════════════
-//  GITHUB PAT MANAGEMENT
-// ══════════════════════════════════════════════════
-function refreshPATStatus(){
-  const pat = getGithubPAT();
-  const badge = document.getElementById('patStatusBadge');
-  const line  = document.getElementById('patStatusLine');
-  if(!badge) return;
-  if(pat){
-    badge.style.background = 'var(--green-light)';
-    badge.style.color = 'var(--green)';
-    badge.textContent = '✓ SET';
-    if(line) line.textContent = 'Token configured — profile changes will save directly to GitHub';
-  } else {
-    badge.style.background = 'var(--red-light)';
-    badge.style.color = 'var(--red)';
-    badge.textContent = 'NOT SET';
-    if(line) line.textContent = 'Required for saving profile changes and uploading photos directly to GitHub';
-  }
-}
-
-async function savePAT(){
-  const val = document.getElementById('patInput').value.trim();
-  const resultEl = document.getElementById('patTestResult');
-  if(!val){ resultEl.style.cssText='display:block;color:var(--red)'; resultEl.textContent='Please paste your token first.'; return; }
-
-  resultEl.style.cssText='display:block;color:var(--text2)';
-  resultEl.textContent='Testing token…';
-
-  // Test by fetching users.json via API
-  try {
-    const res = await fetch(`https://api.github.com/repos/${GITHUB_REPO}/contents/data/users.json`, {
-      headers: { 'Authorization': `Bearer ${val}`, 'Accept': 'application/vnd.github+json' }
-    });
-    if(res.status === 401){ resultEl.style.cssText='display:block;color:var(--red)'; resultEl.textContent='❌ 401 Unauthorized — token is invalid or expired. Generate a new one.'; return; }
-    if(res.status === 403){ resultEl.style.cssText='display:block;color:var(--red)'; resultEl.textContent='❌ 403 Forbidden — token exists but lacks Contents permission on this repo.'; return; }
-    if(res.status === 404){ resultEl.style.cssText='display:block;color:var(--red)'; resultEl.textContent='❌ 404 — repo or file not found. Check repo name and that users.json exists.'; return; }
-    if(!res.ok){ resultEl.style.cssText='display:block;color:var(--red)'; resultEl.textContent=`❌ Error ${res.status} — ${res.statusText}`; return; }
-
-    localStorage.setItem('ic_github_pat', val);
-    document.getElementById('patInput').value = '';
-    refreshPATStatus();
-    resultEl.style.cssText='display:block;color:var(--green)';
-    resultEl.textContent='✓ Token works! Saved to browser storage.';
-    toast('GitHub token saved ✓');
-  } catch(e){
-    resultEl.style.cssText='display:block;color:var(--red)';
-    resultEl.textContent='❌ Network error — ' + e.message;
-  }
-}
-
-function clearPAT(){
-  localStorage.removeItem('ic_github_pat');
-  document.getElementById('patInput').value = '';
-  refreshPATStatus();
-  const resultEl = document.getElementById('patTestResult');
-  resultEl.style.cssText='display:block;color:var(--text2)';
-  resultEl.textContent='Token cleared.';
-  toast('GitHub token removed.');
-}
-
 function trySettings(){
   if(!AUTH){ return; }
   if(AUTH.role !== 'admin'){
@@ -3132,7 +3040,6 @@ function trySettings(){
   goPage('settings');
   renderSettingsTable();
   renderCustomEqList();
-  refreshPATStatus();
 }
 
 function tryUsers(){
@@ -3259,32 +3166,16 @@ async function saveProjectToGitHub(){
     // Check if file already exists (need sha for update)
     let sha = undefined;
     try {
-      const existing = await fetch(`https://api.github.com/repos/${GITHUB_REPO}/contents/${pathObj.apiPath}`,{
-        headers:{'Authorization':`Bearer ${getGithubPAT()}`,'Accept':'application/vnd.github+json'}
-      });
-      if(existing.ok){ const d = await existing.json(); sha = d.sha; }
-    } catch(e){ /* new project */ }
+      const existing = await githubRequest('GET', pathObj.apiPath);
+      sha = existing.sha;
+    } catch(e){ /* new project — no sha needed */ }
 
-    const body = {
+    await githubRequest('PUT', pathObj.apiPath, {
       message: `Save project: ${ref} by ${AUTH.username}`,
       content: b64,
-      branch : GITHUB_BRANCH
-    };
-    if(sha) body.sha = sha;
-
-    const res = await fetch(`https://api.github.com/repos/${GITHUB_REPO}/contents/${pathObj.apiPath}`,{
-      method :'PUT',
-      headers:{
-        'Authorization':`Bearer ${getGithubPAT()}`,
-        'Accept':'application/vnd.github+json',
-        'Content-Type':'application/json'
-      },
-      body: JSON.stringify(body)
+      ...(sha ? { sha } : {})
     });
-    if(!res.ok){
-      const err = await res.json().catch(()=>({}));
-      throw new Error(`${res.status} — ${err.message||res.statusText}`);
-    }
+
     toast(`Project "${ref}" saved to GitHub ✓`);
   } catch(e){
     toast('Save failed: ' + e.message,'err');
@@ -3303,34 +3194,27 @@ async function loadDashboard(){
   const subtitle = document.getElementById('dashSubtitle');
   content.innerHTML = '<div style="color:var(--text3);font-size:12px;padding:20px 0">Loading projects…</div>';
 
-  if(!getGithubPAT()){
-    content.innerHTML = `<div class="dash-empty"><div class="dash-empty-icon">🔑</div><div style="font-size:14px;font-weight:600">GitHub token not configured</div><div style="font-size:12px">Go to <button onclick="trySettings()" style="background:none;border:none;color:var(--accent);cursor:pointer;font-size:12px;text-decoration:underline;padding:0">Settings → GitHub Token</button> to set it up</div></div>`;
+  if(VERCEL_API.includes('YOUR_APP')){
+    content.innerHTML = `<div class="dash-empty"><div class="dash-empty-icon">🔑</div><div style="font-size:14px;font-weight:600">Vercel API not configured</div><div style="font-size:12px">Update <code style="font-family:'DM Mono',monospace">VERCEL_API</code> in the HTML with your deployed Vercel URL</div></div>`;
     subtitle.textContent = '';
     return;
   }
 
   try {
-    // List Projects/ directory
     const isAdmin = AUTH.role === 'admin';
     let userFolders = [];
 
     try {
-      const res = await fetch(`https://api.github.com/repos/${GITHUB_REPO}/contents/Projects`,{
-        headers:{'Authorization':`Bearer ${getGithubPAT()}`,'Accept':'application/vnd.github+json'}
-      });
-      if(res.ok){
-        const all = await res.json();
-        userFolders = all.filter(f=>f.type==='dir');
-        if(!isAdmin){
-          const myFolder = AUTH.firstName + ' ' + AUTH.lastName;
-          userFolders = userFolders.filter(f=>f.name === myFolder);
-        }
-      } else if(res.status === 404){
-        userFolders = []; // Projects folder doesn't exist yet
-      } else {
-        throw new Error(`${res.status} ${res.statusText}`);
+      const data = await githubRequest('GET', 'Projects');
+      userFolders = Array.isArray(data) ? data.filter(f=>f.type==='dir') : [];
+      if(!isAdmin){
+        const myFolder = AUTH.firstName + ' ' + AUTH.lastName;
+        userFolders = userFolders.filter(f=>f.name === myFolder);
       }
-    } catch(e){ throw e; }
+    } catch(e){
+      if(e.message.includes('404')) { userFolders = []; }
+      else throw e;
+    }
 
     if(!userFolders.length){
       content.innerHTML = `<div class="dash-empty"><div class="dash-empty-icon">📂</div><div style="font-size:14px;font-weight:600">No projects yet</div><div style="font-size:12px">Complete the wizard and click <strong>Save Project to GitHub</strong> on the Export page</div></div>`;
@@ -3338,25 +3222,20 @@ async function loadDashboard(){
       return;
     }
 
-    // For each user folder, list project subfolders
     let totalProjects = 0;
     const groups = [];
 
     for(const userFolder of userFolders){
-      const pRes = await fetch(`https://api.github.com/repos/${GITHUB_REPO}/contents/Projects/${encodeURIComponent(userFolder.name)}`,{
-        headers:{'Authorization':`Bearer ${getGithubPAT()}`,'Accept':'application/vnd.github+json'}
-      });
-      if(!pRes.ok) continue;
-      const projectFolders = (await pRes.json()).filter(f=>f.type==='dir');
+      let projectFolders = [];
+      try {
+        const data = await githubRequest('GET', `Projects/${encodeURIComponent(userFolder.name)}`);
+        projectFolders = Array.isArray(data) ? data.filter(f=>f.type==='dir') : [];
+      } catch(e){ continue; }
 
       const projects = [];
       for(const pf of projectFolders){
         try {
-          const jRes = await fetch(`https://api.github.com/repos/${GITHUB_REPO}/contents/Projects/${encodeURIComponent(userFolder.name)}/${encodeURIComponent(pf.name)}/project.json`,{
-            headers:{'Authorization':`Bearer ${getGithubPAT()}`,'Accept':'application/vnd.github+json'}
-          });
-          if(!jRes.ok) continue;
-          const jData = await jRes.json();
+          const jData = await githubRequest('GET', `Projects/${encodeURIComponent(userFolder.name)}/${encodeURIComponent(pf.name)}/project.json`);
           const snap = JSON.parse(atob(jData.content.replace(/\n/g,'')));
           projects.push({ snap, sha: jData.sha, folderName: pf.name, userName: userFolder.name });
         } catch(e){ continue; }
@@ -3501,30 +3380,16 @@ function openProject(snapJson){
 async function deleteProject(userName, folderName){
   if(!confirm(`Delete project "${folderName}" by ${userName}? This cannot be undone.`)) return;
   try {
-    const encodedPath = `Projects/${encodeURIComponent(userName)}/${encodeURIComponent(folderName)}/project.json`;
-    const fileRes = await fetch(`https://api.github.com/repos/${GITHUB_REPO}/contents/${encodedPath}`,{
-      headers:{'Authorization':`Bearer ${getGithubPAT()}`,'Accept':'application/vnd.github+json'}
+    const path = `Projects/${encodeURIComponent(userName)}/${encodeURIComponent(folderName)}/project.json`;
+    const fileData = await githubRequest('GET', path);
+    await githubRequest('DELETE', path, {
+      message: `Delete project: ${folderName}`,
+      sha: fileData.sha
     });
-    if(!fileRes.ok) throw new Error(`Could not find file: ${fileRes.status}`);
-    const fileData = await fileRes.json();
-    const res = await fetch(`https://api.github.com/repos/${GITHUB_REPO}/contents/${encodedPath}`,{
-      method:'DELETE',
-      headers:{
-        'Authorization':`Bearer ${getGithubPAT()}`,
-        'Accept':'application/vnd.github+json',
-        'Content-Type':'application/json'
-      },
-      body: JSON.stringify({
-        message:`Delete project: ${folderName}`,
-        sha: fileData.sha,
-        branch: GITHUB_BRANCH
-      })
-    });
-    if(!res.ok){ const e=await res.json().catch(()=>({})); throw new Error(e.message||res.statusText); }
     toast(`Project "${folderName}" deleted ✓`);
     loadDashboard();
   } catch(e){
-    toast('Delete failed: '+e.message,'err');
+    toast('Delete failed: ' + e.message, 'err');
   }
 }
 
