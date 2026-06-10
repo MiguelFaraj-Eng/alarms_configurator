@@ -3,8 +3,5 @@
     "api/github.js": {
       "maxDuration": 30
     }
-  },
-  "routes": [
-    { "src": "/api/(.*)", "dest": "/api/$1" }
-  ]
+  }
 }
