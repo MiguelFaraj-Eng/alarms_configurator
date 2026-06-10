@@ -5,9 +5,9 @@ module.exports = async function handler(req, res) {
 
   if (req.method === 'OPTIONS') return res.status(204).end();
 
-  const GITHUB_PAT    = process.env.GITHUB_PAT;
-  const GITHUB_REPO   = process.env.GITHUB_REPO   || 'miguelfaraj-eng/alarms_configurator';
-  const GITHUB_BRANCH = process.env.GITHUB_BRANCH || 'main';
+  var GITHUB_PAT    = process.env.GITHUB_PAT;
+  var GITHUB_REPO   = process.env.GITHUB_REPO   || 'miguelfaraj-eng/alarms_configurator';
+  var GITHUB_BRANCH = process.env.GITHUB_BRANCH || 'main';
 
   if (!GITHUB_PAT) return res.status(500).json({ error: 'GITHUB_PAT not set' });
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed. Use POST.' });
@@ -19,8 +19,8 @@ module.exports = async function handler(req, res) {
 
   if (!path) return res.status(400).json({ error: 'Missing path' });
 
-  var decoded  = decodeURIComponent(path);
-  var allowed  = ['data/', 'Projects/', 'Projects', 'assets/avatars/', 'assets/avatars'];
+  var decoded = decodeURIComponent(path);
+  var allowed = ['data/', 'Projects/', 'Projects', 'assets/avatars/', 'assets/avatars'];
   if (!allowed.some(function(p){ return decoded === p || decoded.startsWith(p); })) {
     return res.status(403).json({ error: 'Path not allowed: ' + path });
   }
@@ -39,10 +39,10 @@ module.exports = async function handler(req, res) {
   };
 
   if ((method === 'PUT' || method === 'DELETE') && reqBody) {
-    // If rawContent is provided, base64 encode it server-side
-    // This avoids sending large base64 strings through the proxy
-    if (reqBody.rawContent) {
-      reqBody.content = Buffer.from(reqBody.rawContent).toString('base64');
+    // rawContent = plain text string → encode to base64 here on the server
+    // content = already base64 (images) → use as-is
+    if (reqBody.rawContent !== undefined) {
+      reqBody.content = Buffer.from(reqBody.rawContent, 'utf8').toString('base64');
       delete reqBody.rawContent;
     }
     reqBody.branch = reqBody.branch || GITHUB_BRANCH;
