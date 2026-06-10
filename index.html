@@ -3087,13 +3087,15 @@ async function loadDashboard(){
 
     try {
       const data = await githubRequest('GET', 'Projects');
-      userFolders = Array.isArray(data) ? data.filter(f=>f.type==='dir') : [];      if(!isAdmin){
+      userFolders = Array.isArray(data) ? data.filter(f=>f.type==='dir') : [];
+      if(!isAdmin){
         const myFolder = AUTH.firstName + ' ' + AUTH.lastName;
         userFolders = userFolders.filter(f=>f.name === myFolder);
       }
     } catch(e){
-      if(e.message.includes('404')) { userFolders = []; }
-      else throw e;
+      if(e.message && (e.message.includes('404') || e.message.includes('500') || e.message.includes('Not Found'))){
+        userFolders = [];
+      }
     }
 
     if(!userFolders.length){
