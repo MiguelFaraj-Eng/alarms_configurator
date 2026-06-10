@@ -3160,7 +3160,6 @@ function getProjectPath(firstName, lastName, projectRef){
 }
 
 function buildProjectSnapshot(){
-  // Collect all form values
   const info = {
     projectName : (document.getElementById('projectName')||{}).value||'',
     projectRef  : (document.getElementById('projectRef')||{}).value||'',
@@ -3172,39 +3171,55 @@ function buildProjectSnapshot(){
     projectDate : new Date().toISOString().split('T')[0]
   };
 
-  // Serialize Sets and Maps
   const selectedEq = [...S.selectedEq];
   const quantities = {...S.quantities};
 
-  // entityAlarms: each value is {eqName, eqCat, idx, total, alarmGroups:[{alarmType, category, alarms:[...]}]}
+  // entityAlarms — deep-clone safely regardless of internal shape
   const entityAlarms = {};
-  Object.entries(S.entityAlarms).forEach(([k, entity]) => {
-    if(!entity || typeof entity !== 'object') return;
-    entityAlarms[k] = {
-      eqName  : entity.eqName  || '',
-      eqCat   : entity.eqCat   || '',
-      idx     : entity.idx     || 0,
-      total   : entity.total   || 1,
-      alarmGroups: Array.isArray(entity.alarmGroups)
-        ? entity.alarmGroups.map(g => ({
-            alarmType : g.alarmType  || '',
-            category  : g.category   || '',
-            alarms    : Array.isArray(g.alarms)
-              ? g.alarms.map(a => ({
-                  name    : a.name     || '',
-                  desc    : a.desc     || '',
-                  value   : a.value    || '',
-                  priority: a.priority ?? null,
-                  deleted : !!a.deleted
-                }))
-              : []
-          }))
-        : []
-    };
-  });
+  try {
+    Object.entries(S.entityAlarms).forEach(([k, entity]) => {
+      if(!entity || typeof entity !== 'object') return;
+      const groups = Array.isArray(entity.alarmGroups) ? entity.alarmGroups : [];
+      entityAlarms[k] = {
+        eqName     : entity.eqName  || '',
+        eqCat      : entity.eqCat   || '',
+        idx        : entity.idx     ?? 0,
+        total      : entity.total   ?? 1,
+        alarmGroups: groups.map(g => {
+          const alarms = Array.isArray(g.alarms) ? g.alarms : [];
+          return {
+            alarmType : g.alarmType || '',
+            category  : g.category  || '',
+            alarms    : alarms.map(a => ({
+              name    : a.name     || '',
+              desc    : a.desc     || '',
+              value   : a.value    || '',
+              priority: a.priority ?? null,
+              deleted : !!a.deleted
+            }))
+          };
+        })
+      };
+    });
+  } catch(e){ console.error('entityAlarms serialize error:', e); }
 
-  const commonAlarms    = Array.isArray(S.commonAlarms)     ? S.commonAlarms.map(a=>({...a}))    : [];
-  const customEquipment = Array.isArray(S.customEquipment)  ? S.customEquipment.map(e=>({...e})) : [];
+  // commonAlarms — each item may itself be an object or array; just JSON-clone safely
+  let commonAlarms = [];
+  try {
+    const raw = S.commonAlarms;
+    if(Array.isArray(raw)){
+      commonAlarms = JSON.parse(JSON.stringify(raw));
+    }
+  } catch(e){ console.error('commonAlarms serialize error:', e); }
+
+  // customEquipment
+  let customEquipment = [];
+  try {
+    const raw = S.customEquipment;
+    if(Array.isArray(raw)){
+      customEquipment = JSON.parse(JSON.stringify(raw));
+    }
+  } catch(e){ console.error('customEquipment serialize error:', e); }
 
   return {
     version: 1,
@@ -3231,7 +3246,13 @@ async function saveProjectToGitHub(){
   if(btn){ btn.innerHTML='⏳ Saving…'; btn.disabled=true; }
 
   try {
-    const snapshot = buildProjectSnapshot();
+    let snapshot;
+    try {
+      snapshot = buildProjectSnapshot();
+    } catch(snapErr){
+      throw new Error('Failed to build snapshot: ' + snapErr.message);
+    }
+
     const pathObj = getProjectPath(AUTH.firstName, AUTH.lastName, ref);
     const jsonStr = JSON.stringify(snapshot, null, 2);
     const b64 = btoa(unescape(encodeURIComponent(jsonStr)));
