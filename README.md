@@ -180,5 +180,5 @@ Accessible from the Configure page. Generates project-level alarms (not per-equi
 
 ## Contact
 
-**Miguel Faraj** — miguel.faraj@insightech.com  
+**Miguel Faraj** — miguelfaraj@outlook.com 
 Insightech · Alarm Configuration System · v10
