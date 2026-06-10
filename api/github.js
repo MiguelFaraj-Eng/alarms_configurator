@@ -1,3 +1,6 @@
+// Use native fetch (Node 18+) or fall back gracefully
+var fetchFn = globalThis.fetch || require('node-fetch');
+
 module.exports = async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
@@ -39,8 +42,6 @@ module.exports = async function handler(req, res) {
   };
 
   if ((method === 'PUT' || method === 'DELETE') && reqBody) {
-    // rawContent = plain text string → encode to base64 here on the server
-    // content = already base64 (images) → use as-is
     if (reqBody.rawContent !== undefined) {
       reqBody.content = Buffer.from(reqBody.rawContent, 'utf8').toString('base64');
       delete reqBody.rawContent;
@@ -50,7 +51,7 @@ module.exports = async function handler(req, res) {
   }
 
   try {
-    var ghRes = await fetch(url, opts);
+    var ghRes = await fetchFn(url, opts);
     var text  = await ghRes.text();
     var data;
     try { data = JSON.parse(text); } catch(e) { data = { raw: text }; }
