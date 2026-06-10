@@ -2000,7 +2000,7 @@ function loadCustomEqFromStorage(){
 //  GITHUB CONFIG — update this one line after you
 //  create the repo: YOUR_USERNAME/YOUR_REPO
 // ══════════════════════════════════════════════════
-const REPO_BASE = "https://raw.githubusercontent.com/YOUR_USERNAME/YOUR_REPO/main/";
+const REPO_BASE = "https://raw.githubusercontent.com/miguelfaraj-eng/alarms_configurator/main/";
 
 // ══════════════════════════════════════════════════
 //  AUTH — session stored in sessionStorage
@@ -2617,11 +2617,19 @@ function clearSavedDB(){
 // SHA-256 of "engineer1" = ...generate your own with: echo -n "yourpassword" | sha256sum
 const EMBEDDED_USERS = [
   {
-    "username": "admin",
-    "passwordHash": "a665a45920422f9d417e4867efdc4fb8a04a1f3fff1fa07e998e86f7f7a27ae3",
+    "username": "Miguel",
+    "passwordHash": "8418227effc5604af0f8cf8a7c4d814186189df9fc19098dd85fbc520bbe95ad",
     "role": "admin",
-    "firstName": "Admin",
-    "lastName": "User",
+    "firstName": "Miguel",
+    "lastName": "Faraj",
+    "picture": "miguel.jpg"
+  },
+  {
+    "username": "engineer_test",
+    "passwordHash": "80ca306ac6e68366dd0a26125c9647e0c61fac6668cec6016f5fe30fb12e99bd",
+    "role": "engineer",
+    "firstName": "Test",
+    "lastName": "Engineer",
     "picture": ""
   }
 ];
