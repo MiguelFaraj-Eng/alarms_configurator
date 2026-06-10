@@ -379,16 +379,37 @@ html.light .login-logo{filter:none;}
         <div class="login-brand">INSIGHTECH<span>ALARMS CONFIGURATOR</span></div>
       </div>
     </div>
-    <div class="login-title">Welcome back</div>
-    <div class="login-sub">Sign in to access the configurator</div>
-    <div style="display:flex;flex-direction:column;gap:12px">
-      <div class="fg"><label>Username</label><input type="text" id="ls-user" autocomplete="username" placeholder="Enter your username" onkeydown="if(event.key==='Enter')document.getElementById('ls-pass').focus()"></div>
-      <div class="fg"><label>Password</label><input type="password" id="ls-pass" autocomplete="current-password" placeholder="Enter your password" onkeydown="if(event.key==='Enter')doAppLogin()"></div>
-      <div id="ls-err" style="color:var(--red);font-size:11px;display:none;padding:6px 10px;background:var(--red-light);border-radius:6px;">Invalid username or password.</div>
-      <button class="btn btn-primary" id="ls-btn" style="width:100%;margin-top:4px;padding:11px" onclick="doAppLogin()">Sign In</button>
-      <div style="text-align:center;margin-top:8px"><button class="btn btn-ghost btn-sm" onclick="openOverlay('forgotOverlay')" style="font-size:11px;color:var(--text3)">Forgot password?</button></div>
+    <!-- LOGIN PANEL -->
+    <div id="ls-loginPanel">
+      <div class="login-title">Welcome back</div>
+      <div class="login-sub">Sign in to access the configurator</div>
+      <div style="display:flex;flex-direction:column;gap:12px">
+        <div class="fg"><label>Username</label><input type="text" id="ls-user" autocomplete="username" placeholder="Enter your username" onkeydown="if(event.key==='Enter')document.getElementById('ls-pass').focus()"></div>
+        <div class="fg"><label>Password</label><input type="password" id="ls-pass" autocomplete="current-password" placeholder="Enter your password" onkeydown="if(event.key==='Enter')doAppLogin()"></div>
+        <div id="ls-err" style="color:var(--red);font-size:11px;display:none;padding:8px 10px;background:var(--red-light);border-radius:6px;"></div>
+        <button class="btn btn-primary" id="ls-btn" style="width:100%;margin-top:4px;padding:11px" onclick="doAppLogin()">Sign In</button>
+        <div style="text-align:center;margin-top:6px">
+          <button onclick="showForgotPanel()" style="background:none;border:none;cursor:pointer;font-size:11px;color:var(--text3);padding:4px 8px;border-radius:4px;transition:color .15s" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text3)'">Forgot your password?</button>
+        </div>
+      </div>
     </div>
-    <div class="login-footer">INSIGHTECH · Alarm Configuration System · v9</div>
+    <!-- FORGOT PANEL -->
+    <div id="ls-forgotPanel" style="display:none">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:18px">
+        <button onclick="showLoginPanel()" style="background:none;border:none;cursor:pointer;color:var(--text2);font-size:20px;line-height:1;padding:0 8px 0 0;flex-shrink:0">&#8592;</button>
+        <div>
+          <div style="font-size:18px;font-weight:700">Forgot Password?</div>
+          <div style="font-size:11px;color:var(--text2);margin-top:2px">Send a reset request to the admin</div>
+        </div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:12px">
+        <div class="fg"><label>Your Username</label><input type="text" id="fp-username" placeholder="Enter your username"></div>
+        <div class="fg"><label>Your Email (so admin can reply)</label><input type="email" id="fp-email" placeholder="your@email.com"></div>
+        <div id="fp-msg" style="font-size:11px;display:none;padding:8px 10px;border-radius:6px"></div>
+        <button class="btn btn-primary" style="width:100%;padding:11px" onclick="sendForgotPassword()">&#128231; Send Reset Request</button>
+      </div>
+    </div>
+    <div class="login-footer">INSIGHTECH · Alarm Configuration System · v10</div>
   </div>
 </div>
 
@@ -807,23 +828,6 @@ html.light .login-logo{filter:none;}
       <div style="display:flex;gap:8px;margin-top:6px">
         <button class="btn btn-outline" style="flex:1" onclick="closeOverlay('editProfileOverlay')">Cancel</button>
         <button class="btn btn-primary" style="flex:1" onclick="saveProfile()">💾 Save Changes</button>
-      </div>
-    </div>
-  </div>
-</div>
-
-<!-- FORGOT PASSWORD -->
-<div class="overlay" id="forgotOverlay">
-  <div class="modal" style="max-width:400px">
-    <div class="modal-title">🔑 Forgot Password</div>
-    <div class="modal-sub">Enter your username and we'll send a reset request to the admin.</div>
-    <div style="display:flex;flex-direction:column;gap:12px">
-      <div class="fg"><label>Username</label><input type="text" id="fp-username" placeholder="Your username"></div>
-      <div class="fg"><label>Your Email (so admin can reply)</label><input type="email" id="fp-email" placeholder="your@email.com"></div>
-      <div id="fp-msg" style="font-size:11px;display:none;padding:8px 10px;border-radius:6px"></div>
-      <div style="display:flex;gap:8px;margin-top:4px">
-        <button class="btn btn-outline" style="flex:1" onclick="closeOverlay('forgotOverlay')">Cancel</button>
-        <button class="btn btn-primary" style="flex:1" onclick="sendForgotPassword()">Send Request</button>
       </div>
     </div>
   </div>
@@ -2151,6 +2155,15 @@ function loadCustomEqFromStorage(){
 // ══════════════════════════════════════════════════
 const REPO_BASE = "https://raw.githubusercontent.com/miguelfaraj-eng/alarms_configurator/main/";
 
+// ── GitHub API write config ─────────────────────────────────────────────────
+// Replace GITHUB_PAT_HERE with your Personal Access Token (repo scope).
+// How to create: GitHub → Settings → Developer Settings → Personal Access Tokens → Fine-grained
+// Required permissions: Contents (Read & Write) on this repo.
+// ⚠ Keep repo PRIVATE — this token is visible in source.
+const GITHUB_PAT  = "GITHUB_PAT_HERE";
+const GITHUB_REPO = "miguelfaraj-eng/alarms_configurator";
+const GITHUB_BRANCH = "main";
+
 // ══════════════════════════════════════════════════
 //  AUTH — session stored in sessionStorage
 // ══════════════════════════════════════════════════
@@ -2757,16 +2770,37 @@ Thank you`
 }
 
 // ══════════════════════════════════════════════════
-//  FORGOT PASSWORD
+//  LOGIN PANEL TOGGLE
+// ══════════════════════════════════════════════════
+function showForgotPanel(){
+  document.getElementById('ls-loginPanel').style.display = 'none';
+  document.getElementById('ls-forgotPanel').style.display = 'block';
+  document.getElementById('fp-username').value = document.getElementById('ls-user').value || '';
+  document.getElementById('fp-email').value = '';
+  document.getElementById('fp-msg').style.display = 'none';
+  setTimeout(()=>document.getElementById('fp-username').focus(), 50);
+}
+
+function showLoginPanel(){
+  document.getElementById('ls-forgotPanel').style.display = 'none';
+  document.getElementById('ls-loginPanel').style.display = 'block';
+}
+
+// ══════════════════════════════════════════════════
+//  FORGOT PASSWORD (on login screen)
 // ══════════════════════════════════════════════════
 function sendForgotPassword(){
   const username = document.getElementById('fp-username').value.trim();
   const email    = document.getElementById('fp-email').value.trim();
   const msgEl    = document.getElementById('fp-msg');
 
-  if(!username){ msgEl.style.cssText='display:block;color:var(--red);background:var(--red-light);border-radius:6px;padding:8px 10px;font-size:11px'; msgEl.textContent='Please enter your username.'; return; }
+  if(!username){
+    msgEl.style.cssText = 'display:block;color:var(--red);background:var(--red-light);border-radius:6px;padding:8px 10px;font-size:11px';
+    msgEl.textContent = 'Please enter your username.';
+    return;
+  }
 
-  const adminEmail = (EMBEDDED_USERS.find(u=>u.role==='admin')||{}).email || 'miguel.faraj@insightech.com';
+  const adminEmail = (EMBEDDED_USERS.find(u => u.role === 'admin') || {}).email || 'miguel.faraj@insightech.com';
   const subject = encodeURIComponent(`[Password Reset] ${username} needs access`);
   const body = encodeURIComponent(
 `Hi Miguel,
@@ -2775,13 +2809,175 @@ ${username} has forgotten their password and is requesting a reset.
 
 ${email ? 'Their email: ' + email : 'They did not provide an email.'}
 
-Please update their password in data/users.json and send them their new credentials.
+Please update their password in data/users.json and share the new credentials with them.
 
 Thanks`
   );
   window.open(`mailto:${adminEmail}?subject=${subject}&body=${body}`);
   msgEl.style.cssText = 'display:block;color:var(--green);background:var(--green-light);border-radius:6px;padding:8px 10px;font-size:11px';
-  msgEl.textContent = 'Reset request opened in your email client. The admin will contact you shortly.';
+  msgEl.textContent = 'Reset request opened in your email client ✓ The admin will contact you shortly.';
+}
+
+// ══════════════════════════════════════════════════
+//  GITHUB API — read & write users.json
+// ══════════════════════════════════════════════════
+async function githubGetFile(path){
+  const res = await fetch(`https://api.github.com/repos/${GITHUB_REPO}/contents/${path}`, {
+    headers: {
+      'Authorization': `Bearer ${GITHUB_PAT}`,
+      'Accept': 'application/vnd.github+json'
+    }
+  });
+  if(!res.ok) throw new Error(`GitHub GET failed: ${res.status} ${res.statusText}`);
+  return await res.json(); // { content (base64), sha, ... }
+}
+
+async function githubPutFile(path, contentBase64, sha, message){
+  const res = await fetch(`https://api.github.com/repos/${GITHUB_REPO}/contents/${path}`, {
+    method: 'PUT',
+    headers: {
+      'Authorization': `Bearer ${GITHUB_PAT}`,
+      'Accept': 'application/vnd.github+json',
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({ message, content: contentBase64, sha, branch: GITHUB_BRANCH })
+  });
+  if(!res.ok){
+    const err = await res.json().catch(()=>({}));
+    throw new Error(`GitHub PUT failed: ${res.status} — ${err.message || res.statusText}`);
+  }
+  return await res.json();
+}
+
+async function saveUsersToGitHub(updatedUsers){
+  if(GITHUB_PAT === 'GITHUB_PAT_HERE'){
+    throw new Error('GitHub PAT not configured. Replace GITHUB_PAT_HERE in the source.');
+  }
+  const jsonStr = JSON.stringify(updatedUsers, null, 2);
+  const base64 = btoa(unescape(encodeURIComponent(jsonStr)));
+  const file = await githubGetFile('data/users.json');
+  await githubPutFile('data/users.json', base64, file.sha, `Update profile: ${AUTH.username}`);
+}
+
+// ══════════════════════════════════════════════════
+//  SAVE PROFILE → GitHub
+// ══════════════════════════════════════════════════
+async function saveProfile(){
+  const btn = document.querySelector('#editProfileOverlay .btn-primary');
+  const msgEl = document.getElementById('ep-passMsg');
+  msgEl.style.display = 'none';
+
+  const newFirst   = document.getElementById('ep-firstName').value.trim();
+  const newLast    = document.getElementById('ep-lastName').value.trim();
+  const newEmail   = document.getElementById('ep-email').value.trim();
+  const newPhone   = document.getElementById('ep-phone').value.trim();
+  const curPass    = document.getElementById('ep-currentPass').value;
+  const newPass    = document.getElementById('ep-newPass').value;
+  const confPass   = document.getElementById('ep-confirmPass').value;
+  const newAvatarB64 = document.getElementById('ep-avatarInput').dataset.base64 || null;
+
+  // Password validation
+  let newHash = null;
+  if(curPass || newPass || confPass){
+    if(!curPass){
+      msgEl.textContent = 'Enter your current password to change it.';
+      msgEl.style.display = 'block'; return;
+    }
+    const curHash = await sha256(curPass);
+    if(curHash !== AUTH.passwordHash){
+      msgEl.textContent = 'Current password is incorrect.';
+      msgEl.style.display = 'block'; return;
+    }
+    if(newPass.length < 8){
+      msgEl.textContent = 'New password must be at least 8 characters.';
+      msgEl.style.display = 'block'; return;
+    }
+    if(newPass !== confPass){
+      msgEl.textContent = 'New passwords do not match.';
+      msgEl.style.display = 'block'; return;
+    }
+    newHash = await sha256(newPass);
+  }
+
+  // Show saving state
+  if(btn){ btn.textContent = '⏳ Saving…'; btn.disabled = true; }
+
+  try {
+    // Fetch latest users.json from GitHub
+    const fileData = await githubGetFile('data/users.json');
+    const currentJson = JSON.parse(atob(fileData.content.replace(/\n/g,'')));
+
+    // Update the matching user entry
+    const idx = currentJson.findIndex(u => u.username === AUTH.username);
+    if(idx === -1) throw new Error('Your user entry was not found in users.json');
+
+    if(newFirst) currentJson[idx].firstName = newFirst;
+    if(newLast)  currentJson[idx].lastName  = newLast;
+    if(newEmail) currentJson[idx].email     = newEmail;
+    if(newPhone !== undefined) currentJson[idx].phone = newPhone;
+    if(newHash){
+      currentJson[idx].passwordHash = newHash;
+      currentJson[idx].password = newPass;
+    }
+
+    // Upload avatar to GitHub as assets/avatars/<username>.jpg if provided
+    if(newAvatarB64){
+      const avatarFilename = AUTH.username.replace(/\s+/g,'_').toLowerCase() + '.jpg';
+      const pureB64 = newAvatarB64.split(',')[1]; // strip data:image/...;base64,
+      let avatarSha = undefined;
+      try {
+        const existing = await githubGetFile(`assets/avatars/${avatarFilename}`);
+        avatarSha = existing.sha;
+      } catch(e){ /* new file, no sha needed */ }
+
+      const avatarRes = await fetch(`https://api.github.com/repos/${GITHUB_REPO}/contents/assets/avatars/${avatarFilename}`, {
+        method: 'PUT',
+        headers: {
+          'Authorization': `Bearer ${GITHUB_PAT}`,
+          'Accept': 'application/vnd.github+json',
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          message: `Upload avatar for ${AUTH.username}`,
+          content: pureB64,
+          ...(avatarSha ? { sha: avatarSha } : {}),
+          branch: GITHUB_BRANCH
+        })
+      });
+      if(avatarRes.ok){
+        currentJson[idx].picture = avatarFilename;
+      }
+    }
+
+    // Write updated users.json back
+    const updatedBase64 = btoa(unescape(encodeURIComponent(JSON.stringify(currentJson, null, 2))));
+    await githubPutFile('data/users.json', updatedBase64, fileData.sha, `Update profile: ${AUTH.username}`);
+
+    // Update AUTH session to reflect changes
+    const updated = currentJson[idx];
+    AUTH.firstName    = updated.firstName;
+    AUTH.lastName     = updated.lastName;
+    AUTH.email        = updated.email;
+    AUTH.phone        = updated.phone;
+    if(newHash) AUTH.passwordHash = newHash;
+    if(updated.picture) AUTH.picture = updated.picture;
+    sessionStorage.setItem('ic_auth', JSON.stringify(AUTH));
+
+    // Also update EMBEDDED_USERS cache so re-login works immediately
+    const embIdx = EMBEDDED_USERS.findIndex(u => u.username === AUTH.username);
+    if(embIdx !== -1) Object.assign(EMBEDDED_USERS[embIdx], currentJson[idx]);
+
+    renderHeaderAvatar();
+    populateEngineerBanner();
+    closeOverlay('editProfileOverlay');
+    toast('Profile saved to GitHub ✓');
+
+  } catch(err){
+    msgEl.textContent = '❌ ' + err.message;
+    msgEl.style.cssText = 'display:block;color:var(--red);background:var(--red-light);border-radius:6px;padding:8px 10px;font-size:11px';
+  } finally {
+    if(btn){ btn.textContent = '💾 Save Changes'; btn.disabled = false; }
+  }
 }
 
 // ══════════════════════════════════════════════════
