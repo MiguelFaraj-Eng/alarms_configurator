@@ -2201,6 +2201,17 @@ function getGithubPAT(){ return null; } // PAT is on Vercel, not here
 
 // ── Proxy helper — replaces all direct GitHub fetch calls ──────────────────
 async function githubRequest(method, path, body){
+  // Send rawContent as plain string — Vercel proxy will base64 encode it
+  // This keeps the JSON payload smaller (base64 adds ~33% overhead)
+  if(body && body.content){
+    body = Object.assign({}, body);
+    try {
+      body.rawContent = atob(body.content); // decode back to raw string
+      delete body.content;
+    } catch(e) {
+      // If atob fails (binary content), keep as-is
+    }
+  }
   const res = await fetch(VERCEL_API, {
     method : 'POST',
     headers: { 'Content-Type': 'application/json' },
