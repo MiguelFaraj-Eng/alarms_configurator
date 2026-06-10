@@ -306,5 +306,16 @@
     "email": "simon.hantouch@technicaintl.com",
     "phone": "+961 76 148 598",
     "picture": ""
+  },
+  {
+    "username": "Rami Rayess",
+    "passwordHash": "edd2f5ed77e7a949389fe2dc59eb96ec8b93b70cc3c3fc9ce78284929cf5d548",
+    "password": "Password",
+    "role": "engineer",
+    "firstName": "Rami",
+    "lastName": "Rayess",
+    "email": "rami.rayess@technicaintl.com",
+    "phone": "+961 3 384 277",
+    "picture": ""
   }
 ]
