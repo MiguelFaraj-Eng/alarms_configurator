@@ -3397,6 +3397,8 @@ async function loadDashboard(){
 
         const card = document.createElement('div');
         card.className = 'proj-card';
+        // Store snap as data attribute to avoid onclick escaping issues
+        card.dataset.snap = JSON.stringify(snap);
         card.innerHTML = `
           <div class="proj-card-header">
             <div style="flex:1;min-width:0">
@@ -3413,10 +3415,19 @@ async function loadDashboard(){
           <div class="proj-card-footer">
             <span class="proj-stat">${eqCount} equipment type${eqCount!==1?'s':''}</span>
             <div style="margin-left:auto;display:flex;gap:6px">
-              <button class="btn btn-primary btn-sm" onclick="openProject(${JSON.stringify(JSON.stringify(snap))})">▶ Open</button>
-              <button class="btn btn-outline btn-sm" style="color:var(--red);border-color:var(--red)" onclick="deleteProject(${JSON.stringify(userName)},${JSON.stringify(folderName)})">🗑</button>
+              <button class="btn btn-primary btn-sm" id="open-${esc(folderName)}">▶ Open</button>
+              <button class="btn btn-outline btn-sm" style="color:var(--red);border-color:var(--red)" id="del-${esc(folderName)}">🗑</button>
             </div>
           </div>`;
+
+        // Attach events after insertion to avoid any escaping issues
+        card.querySelector(`#open-${esc(folderName)}`).addEventListener('click', ()=>{
+          openProject(card.dataset.snap);
+        });
+        card.querySelector(`#del-${esc(folderName)}`).addEventListener('click', (e)=>{
+          e.stopPropagation();
+          deleteProject(userName, folderName);
+        });
         grid.appendChild(card);
       });
 
@@ -3432,7 +3443,7 @@ async function loadDashboard(){
 
 function openProject(snapJson){
   try {
-    const snap = JSON.parse(snapJson);
+    const snap = typeof snapJson === 'string' ? JSON.parse(snapJson) : snapJson;
     const info = snap.info || {};
 
     // Restore project info fields
@@ -3443,42 +3454,47 @@ function openProject(snapJson){
     set('projectSite',  info.projectSite);
     set('projectNotes', info.projectNotes);
 
-    // Restore state — guard against shape mismatches
-    S.selectedEq      = new Set(Array.isArray(snap.selectedEq) ? snap.selectedEq : []);
-    S.quantities      = (snap.quantities && typeof snap.quantities==='object') ? snap.quantities : {};
-    S.commonAlarms    = Array.isArray(snap.commonAlarms)    ? snap.commonAlarms    : [];
-    S.customEquipment = Array.isArray(snap.customEquipment) ? snap.customEquipment : [];
+    // Restore equipment selections and quantities
+    S.selectedEq  = new Set(Array.isArray(snap.selectedEq) ? snap.selectedEq : []);
+    S.quantities  = (snap.quantities && typeof snap.quantities==='object') ? snap.quantities : {};
 
-    // Restore entityAlarms — must be {eqName,eqCat,idx,total,alarmGroups}
+    // Restore entityAlarms — already built with correct structure, do NOT call buildEntityAlarms()
     S.entityAlarms = {};
     if(snap.entityAlarms && typeof snap.entityAlarms==='object'){
-      Object.entries(snap.entityAlarms).forEach(([k,entity])=>{
+      Object.entries(snap.entityAlarms).forEach(([k, entity])=>{
         if(!entity || typeof entity !== 'object') return;
         S.entityAlarms[k] = {
           eqName     : entity.eqName  || '',
           eqCat      : entity.eqCat   || '',
-          idx        : entity.idx     || 0,
-          total      : entity.total   || 1,
+          idx        : entity.idx     ?? 0,
+          total      : entity.total   ?? 1,
           alarmGroups: Array.isArray(entity.alarmGroups) ? entity.alarmGroups : []
         };
       });
     }
 
+    S.commonAlarms    = Array.isArray(snap.commonAlarms)    ? snap.commonAlarms    : [];
+    S.customEquipment = Array.isArray(snap.customEquipment) ? snap.customEquipment : [];
+    S.activeEntity    = null;
+
     // Unlock all steps
     S.unlocked = new Set(['project','equipment','configure','export']);
     updateTabs();
 
-    // Render equipment checkboxes to reflect restored state
+    // Render equipment checkboxes to reflect restored selections
     renderEquipment();
 
-    // Update sidebar stats
+    // Render configure page (same sequence as goEquipment but skip buildEntityAlarms)
+    renderQtyPanel();
+    renderSidebarConfig();
     updateStats();
 
-    toast(`Project "${info.projectRef||'unknown'}" loaded ✓`);
+    toast(`Project "${info.projectRef || info.projectName || 'unknown'}" opened ✓`);
     goPage('configure');
-    renderConfigure();
+
   } catch(e){
-    toast('Failed to open project: '+e.message,'err');
+    toast('Failed to open project: ' + e.message, 'err');
+    console.error('openProject error:', e);
   }
 }
 
