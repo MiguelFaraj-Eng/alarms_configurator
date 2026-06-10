@@ -461,6 +461,15 @@ html.light .login-logo{filter:none;}
         <div class="big-num">01</div>
         <div><div class="step-h">Project Information</div><div class="step-p">All starred fields are required before proceeding</div></div>
       </div>
+      <!-- Logged-in engineer info (read-only, pulled from session) -->
+      <div id="engineerInfoBanner" style="display:flex;align-items:center;gap:12px;background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:12px 16px;margin-bottom:14px">
+        <div id="projAvatarWrap"></div>
+        <div>
+          <div style="font-size:12px;font-weight:600" id="projEngineerName">—</div>
+          <div style="font-size:10px;color:var(--text3);font-family:'DM Mono',monospace;text-transform:uppercase;letter-spacing:1px" id="projEngineerRole">—</div>
+        </div>
+        <div style="margin-left:auto;font-family:'DM Mono',monospace;font-size:11px;color:var(--text3)" id="projDateDisplay">—</div>
+      </div>
       <div class="card">
         <div class="form-row full"><div class="fg">
           <label>Project Name *</label>
@@ -468,15 +477,10 @@ html.light .login-logo{filter:none;}
           <div class="err-msg" id="err-projectName">Required</div>
         </div></div>
         <div class="form-row">
-          <div class="fg"><label>Engineer Name *</label><input type="text" id="engineerName" placeholder="Full name" oninput="clearErr(this)"><div class="err-msg" id="err-engineerName">Required</div></div>
-          <div class="fg"><label>Engineer ID *</label><input type="text" id="engineerId" placeholder="Badge / ID" oninput="clearErr(this)"><div class="err-msg" id="err-engineerId">Required</div></div>
-        </div>
-        <div class="form-row">
           <div class="fg"><label>Client / Customer *</label><input type="text" id="clientName" placeholder="Customer org" oninput="clearErr(this)"><div class="err-msg" id="err-clientName">Required</div></div>
           <div class="fg"><label>Project Reference *</label><input type="text" id="projectRef" placeholder="PRJ-2024-001" oninput="clearErr(this)"><div class="err-msg" id="err-projectRef">Required</div></div>
         </div>
-        <div class="form-row">
-          <div class="fg"><label>Date *</label><input type="text" id="projectDate" oninput="clearErr(this)"><div class="err-msg" id="err-projectDate">Required</div></div>
+        <div class="form-row full">
           <div class="fg"><label>Site / Location *</label><input type="text" id="projectSite" placeholder="Plant location" oninput="clearErr(this)"><div class="err-msg" id="err-projectSite">Required</div></div>
         </div>
         <div class="form-row full"><div class="fg">
@@ -484,6 +488,10 @@ html.light .login-logo{filter:none;}
           <textarea id="projectNotes" rows="2" placeholder="Optional notes..." style="resize:vertical"></textarea>
         </div></div>
       </div>
+      <!-- hidden fields populated from AUTH -->
+      <input type="hidden" id="engineerName">
+      <input type="hidden" id="engineerId">
+      <input type="hidden" id="projectDate">
       <div class="actions">
         <button class="btn btn-primary" onclick="goProject()">Next: Select Equipment →</button>
       </div>
@@ -1153,7 +1161,7 @@ function showFieldErr(id){
   if(e) e.classList.add('show');
 }
 function goProject(){
-  const req=['projectName','engineerName','engineerId','clientName','projectRef','projectDate','projectSite'];
+  const req=['projectName','clientName','projectRef','projectSite'];
   let ok=true;
   req.forEach(id=>{ if(!document.getElementById(id).value.trim()){ showFieldErr(id); ok=false; }});
   if(!ok){ toast('Fill in all required fields.','err'); document.querySelector('.err')?.scrollIntoView({behavior:'smooth',block:'center'}); return; }
@@ -2057,8 +2065,47 @@ function doAppLogout(){
   closeUserMenu();
 }
 
+function populateEngineerBanner(){
+  if(!AUTH) return;
+  // Fill hidden inputs for export
+  const today = new Date().toISOString().split('T')[0];
+  document.getElementById('engineerName').value = AUTH.firstName + ' ' + AUTH.lastName;
+  document.getElementById('engineerId').value = AUTH.username;
+  document.getElementById('projectDate').value = today;
+
+  // Banner display
+  document.getElementById('projEngineerName').textContent = AUTH.firstName + ' ' + AUTH.lastName;
+  document.getElementById('projEngineerRole').textContent = AUTH.role;
+  document.getElementById('projDateDisplay').textContent = today;
+
+  // Mini avatar in banner
+  const wrap = document.getElementById('projAvatarWrap');
+  const initials = ((AUTH.firstName||'')[0]||'') + ((AUTH.lastName||'')[0]||'');
+  const imgSrc = AUTH.picture ? (REPO_BASE + 'assets/avatars/' + AUTH.picture) : '';
+  if(imgSrc){
+    const img = document.createElement('img');
+    img.style.cssText = 'width:36px;height:36px;border-radius:50%;object-fit:cover;border:2px solid var(--border)';
+    img.src = imgSrc;
+    img.alt = AUTH.firstName || '';
+    img.onerror = function(){
+      const ph = document.createElement('div');
+      ph.style.cssText = 'width:36px;height:36px;border-radius:50%;background:var(--accent);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;color:#fff';
+      ph.textContent = initials;
+      wrap.replaceChild(ph, img);
+    };
+    wrap.innerHTML = ''; wrap.appendChild(img);
+  } else {
+    wrap.innerHTML = '';
+    const ph = document.createElement('div');
+    ph.style.cssText = 'width:36px;height:36px;border-radius:50%;background:var(--accent);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;color:#fff';
+    ph.textContent = initials;
+    wrap.appendChild(ph);
+  }
+}
+
 function onLoginSuccess(){
-  // Show user menu
+  // Populate engineer info on project page
+  populateEngineerBanner();
   document.getElementById('userMenuWrap').style.display = 'flex';
   renderHeaderAvatar();
 
@@ -2077,13 +2124,31 @@ function renderHeaderAvatar(){
   const imgSrc = AUTH.picture ? (REPO_BASE + 'assets/avatars/' + AUTH.picture) : '';
   const initials = ((AUTH.firstName||'')[0]||'') + ((AUTH.lastName||'')[0]||'');
 
-  if(imgSrc){
-    wrap.innerHTML = `<img class="user-avatar" src="${imgSrc}" onerror="this.parentElement.innerHTML='<div class=\\"user-avatar-placeholder\\">${esc(initials)}</div>'" alt="${esc(AUTH.firstName)}">`;
-    ddWrap.innerHTML = `<img class="user-dd-avatar" src="${imgSrc}" onerror="this.parentElement.innerHTML='<div class=\\"user-dd-avatar-ph\\">${esc(initials)}</div>'" alt="${esc(AUTH.firstName)}">`;
-  } else {
-    wrap.innerHTML = `<div class="user-avatar-placeholder">${esc(initials)}</div>`;
-    ddWrap.innerHTML = `<div class="user-dd-avatar-ph">${esc(initials)}</div>`;
+  function makeAvatar(cls, phCls, src, init, fallbackEl){
+    if(src){
+      const img = document.createElement('img');
+      img.className = cls;
+      img.src = src;
+      img.alt = AUTH.firstName || '';
+      img.onerror = function(){ 
+        const ph = document.createElement('div');
+        ph.className = phCls;
+        ph.textContent = init;
+        this.parentElement.replaceChild(ph, this);
+      };
+      fallbackEl.innerHTML = '';
+      fallbackEl.appendChild(img);
+    } else {
+      fallbackEl.innerHTML = '';
+      const ph = document.createElement('div');
+      ph.className = phCls;
+      ph.textContent = init;
+      fallbackEl.appendChild(ph);
+    }
   }
+
+  makeAvatar('user-avatar', 'user-avatar-placeholder', imgSrc, initials, wrap);
+  makeAvatar('user-dd-avatar', 'user-dd-avatar-ph', imgSrc, initials, ddWrap);
   document.getElementById('ddName').textContent = AUTH.firstName + ' ' + AUTH.lastName;
   document.getElementById('ddRole').textContent = AUTH.role;
 }
@@ -2154,21 +2219,60 @@ async function renderUsersPage(){
     users = EMBEDDED_USERS || [];
   }
   if(!users.length){ grid.innerHTML = '<div style="font-size:12px;color:var(--text3)">No users found.</div>'; return; }
-  grid.innerHTML = users.map(u => {
+
+  grid.innerHTML = '';
+  users.forEach(u => {
     const initials = ((u.firstName||'')[0]||'') + ((u.lastName||'')[0]||'');
     const imgSrc = u.picture ? (REPO_BASE + 'assets/avatars/' + u.picture) : '';
-    const avatarHtml = imgSrc
-      ? `<img class="user-card-avatar" src="${esc(imgSrc)}" onerror="this.outerHTML='<div class=\\"user-card-avatar-ph\\">${esc(initials)}</div>'" alt="${esc(u.firstName)}">`
-      : `<div class="user-card-avatar-ph">${esc(initials)}</div>`;
-    const roleCls = u.role === 'admin' ? 'role-admin' : 'role-engineer';
     const isSelf = AUTH && AUTH.username === u.username;
-    return `<div class="user-card" style="${isSelf?'border-color:var(--accent)':''}">
-      ${avatarHtml}
-      <div class="user-card-name">${esc(u.firstName)} ${esc(u.lastName)}${isSelf?' <span style="font-size:9px;color:var(--accent)">(you)</span>':''}</div>
-      <div class="user-card-user">@${esc(u.username)}</div>
-      <div class="role-badge ${roleCls}">${esc(u.role)}</div>
-    </div>`;
-  }).join('');
+    const roleCls = u.role === 'admin' ? 'role-admin' : 'role-engineer';
+
+    const card = document.createElement('div');
+    card.className = 'user-card';
+    if(isSelf) card.style.borderColor = 'var(--accent)';
+
+    if(imgSrc){
+      const img = document.createElement('img');
+      img.className = 'user-card-avatar';
+      img.src = imgSrc;
+      img.alt = u.firstName || '';
+      img.onerror = function(){
+        const ph = document.createElement('div');
+        ph.className = 'user-card-avatar-ph';
+        ph.textContent = initials;
+        img.parentElement.replaceChild(ph, img);
+      };
+      card.appendChild(img);
+    } else {
+      const ph = document.createElement('div');
+      ph.className = 'user-card-avatar-ph';
+      ph.textContent = initials;
+      card.appendChild(ph);
+    }
+
+    const nameEl = document.createElement('div');
+    nameEl.className = 'user-card-name';
+    nameEl.textContent = (u.firstName||'') + ' ' + (u.lastName||'');
+    if(isSelf){
+      const you = document.createElement('span');
+      you.style.cssText = 'font-size:9px;color:var(--accent);margin-left:4px';
+      you.textContent = '(you)';
+      nameEl.appendChild(you);
+    }
+    card.appendChild(nameEl);
+
+    const userEl = document.createElement('div');
+    userEl.className = 'user-card-user';
+    userEl.textContent = '@' + (u.username||'');
+    card.appendChild(userEl);
+
+    const badge = document.createElement('div');
+    badge.className = 'role-badge ' + roleCls;
+    badge.textContent = u.role||'';
+    card.appendChild(badge);
+
+    grid.appendChild(card);
+  });
 }
 
 // ══════════════════════════════════════════════════
@@ -2649,7 +2753,6 @@ function init(){
 
   updateTabs();
   renderEquipment();
-  document.getElementById('projectDate').value=new Date().toISOString().split('T')[0];
   // Restore custom equipment
   loadCustomEqFromStorage();
   renderCustomEqList();
