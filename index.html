@@ -632,6 +632,30 @@ html.light .login-logo{filter:none;}
     <div style="padding:28px;max-width:960px;margin:0 auto;width:100%">
       <div style="font-size:20px;font-weight:700;margin-bottom:20px;">⚙ Alarm Database &amp; Settings</div>
 
+      <!-- GitHub Token Setup -->
+      <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;overflow:hidden;margin-bottom:24px" id="githubTokenCard">
+        <div style="padding:14px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px">
+          <div style="width:32px;height:32px;border-radius:8px;background:var(--purple-light);display:flex;align-items:center;justify-content:center;font-size:15px;flex-shrink:0">🔑</div>
+          <div style="flex:1">
+            <div style="font-size:13px;font-weight:600">GitHub Personal Access Token</div>
+            <div style="font-size:11px;color:var(--text2)" id="patStatusLine">Required for saving profile changes and uploading photos directly to GitHub</div>
+          </div>
+          <div id="patStatusBadge" style="font-size:10px;font-weight:700;padding:3px 10px;border-radius:20px;background:var(--red-light);color:var(--red)">NOT SET</div>
+        </div>
+        <div style="padding:16px 20px">
+          <div style="font-size:11px;color:var(--text2);margin-bottom:10px;line-height:1.6">
+            Create a token at <strong>GitHub → Settings → Developer Settings → Personal Access Tokens → Fine-grained</strong>.<br>
+            Select repo <code style="font-family:'DM Mono',monospace;background:var(--surface2);padding:1px 5px;border-radius:3px">alarms_configurator</code> · Permission: <strong>Contents — Read &amp; Write</strong>
+          </div>
+          <div style="display:flex;gap:8px;align-items:center">
+            <input type="password" id="patInput" placeholder="ghp_xxxxxxxxxxxxxxxxxxxx" style="flex:1;padding:8px 12px;border-radius:8px;border:1.5px solid var(--border);background:var(--surface2);color:var(--text);font-family:'DM Mono',monospace;font-size:12px;outline:none" onfocus="this.type='text'" onblur="this.type='password'">
+            <button class="btn btn-primary btn-sm" onclick="savePAT()">Save Token</button>
+            <button class="btn btn-outline btn-sm" onclick="clearPAT()" style="color:var(--red);border-color:var(--red)">Clear</button>
+          </div>
+          <div id="patTestResult" style="font-size:11px;margin-top:8px;display:none"></div>
+        </div>
+      </div>
+
       <!-- Import section inside settings -->
       <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;overflow:hidden;margin-bottom:24px">
         <div style="padding:14px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px">
@@ -762,9 +786,15 @@ html.light .login-logo{filter:none;}
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px">
       <div>
         <div class="modal-title" style="margin-bottom:0">✏️ Edit Profile</div>
-        <div style="font-size:11px;color:var(--text2);margin-top:3px">Changes saved to your browser — permanent changes require updating users.json in GitHub</div>
+        <div style="font-size:11px;color:var(--text2);margin-top:3px">Changes saved directly to GitHub</div>
       </div>
       <button class="btn btn-ghost btn-sm" onclick="closeOverlay('editProfileOverlay')" style="font-size:16px;padding:4px 8px">✕</button>
+    </div>
+
+    <!-- PAT warning -->
+    <div id="ep-patWarning" style="display:none;background:var(--orange-light);border:1px solid var(--orange);border-radius:8px;padding:10px 14px;font-size:11px;color:var(--text);margin-bottom:14px;line-height:1.6">
+      ⚠ <strong>GitHub token not set.</strong> Saving will fail.<br>
+      Go to <button onclick="closeOverlay('editProfileOverlay');setTimeout(trySettings,50)" style="background:none;border:none;cursor:pointer;color:var(--accent);font-size:11px;padding:0;text-decoration:underline">Settings → GitHub Token</button> to set it up first.
     </div>
 
     <!-- Avatar upload area -->
@@ -2156,13 +2186,14 @@ function loadCustomEqFromStorage(){
 const REPO_BASE = "https://raw.githubusercontent.com/miguelfaraj-eng/alarms_configurator/main/";
 
 // ── GitHub API write config ─────────────────────────────────────────────────
-// Replace GITHUB_PAT_HERE with your Personal Access Token (repo scope).
-// How to create: GitHub → Settings → Developer Settings → Personal Access Tokens → Fine-grained
-// Required permissions: Contents (Read & Write) on this repo.
-// ⚠ Keep repo PRIVATE — this token is visible in source.
-const GITHUB_PAT  = "GITHUB_PAT_HERE";
-const GITHUB_REPO = "miguelfaraj-eng/alarms_configurator";
+// The PAT is entered once by the admin in Settings and stored in localStorage.
+// You can also hardcode it here if you prefer (repo must be private).
+const GITHUB_REPO   = "miguelfaraj-eng/alarms_configurator";
 const GITHUB_BRANCH = "main";
+
+function getGithubPAT(){
+  return localStorage.getItem('ic_github_pat') || '';
+}
 
 // ══════════════════════════════════════════════════
 //  AUTH — session stored in sessionStorage
@@ -2598,6 +2629,16 @@ Insightech`
 function openEditProfile(){
   if(!AUTH) return;
 
+  // Show warning if PAT not configured
+  const patWarn = document.getElementById('ep-patWarning');
+  if(patWarn){
+    if(!getGithubPAT()){
+      patWarn.style.display = 'block';
+    } else {
+      patWarn.style.display = 'none';
+    }
+  }
+
   // Fill fields
   document.getElementById('ep-firstName').value   = AUTH.firstName  || '';
   document.getElementById('ep-lastName').value    = AUTH.lastName   || '';
@@ -2824,7 +2865,7 @@ Thanks`
 async function githubGetFile(path){
   const res = await fetch(`https://api.github.com/repos/${GITHUB_REPO}/contents/${path}`, {
     headers: {
-      'Authorization': `Bearer ${GITHUB_PAT}`,
+      'Authorization': `Bearer ${getGithubPAT()}`,
       'Accept': 'application/vnd.github+json'
     }
   });
@@ -2836,7 +2877,7 @@ async function githubPutFile(path, contentBase64, sha, message){
   const res = await fetch(`https://api.github.com/repos/${GITHUB_REPO}/contents/${path}`, {
     method: 'PUT',
     headers: {
-      'Authorization': `Bearer ${GITHUB_PAT}`,
+      'Authorization': `Bearer ${getGithubPAT()}`,
       'Accept': 'application/vnd.github+json',
       'Content-Type': 'application/json'
     },
@@ -2850,8 +2891,8 @@ async function githubPutFile(path, contentBase64, sha, message){
 }
 
 async function saveUsersToGitHub(updatedUsers){
-  if(GITHUB_PAT === 'GITHUB_PAT_HERE'){
-    throw new Error('GitHub PAT not configured. Replace GITHUB_PAT_HERE in the source.');
+  if(!getGithubPAT()){
+    throw new Error('GitHub token not configured. Go to Settings → GitHub Token to set it up.');
   }
   const jsonStr = JSON.stringify(updatedUsers, null, 2);
   const base64 = btoa(unescape(encodeURIComponent(jsonStr)));
@@ -2933,7 +2974,7 @@ async function saveProfile(){
       const avatarRes = await fetch(`https://api.github.com/repos/${GITHUB_REPO}/contents/assets/avatars/${avatarFilename}`, {
         method: 'PUT',
         headers: {
-          'Authorization': `Bearer ${GITHUB_PAT}`,
+          'Authorization': `Bearer ${getGithubPAT()}`,
           'Accept': 'application/vnd.github+json',
           'Content-Type': 'application/json'
         },
@@ -2983,6 +3024,67 @@ async function saveProfile(){
 // ══════════════════════════════════════════════════
 //  SETTINGS PAGE ACCESS (role-gated)
 // ══════════════════════════════════════════════════
+// ══════════════════════════════════════════════════
+//  GITHUB PAT MANAGEMENT
+// ══════════════════════════════════════════════════
+function refreshPATStatus(){
+  const pat = getGithubPAT();
+  const badge = document.getElementById('patStatusBadge');
+  const line  = document.getElementById('patStatusLine');
+  if(!badge) return;
+  if(pat){
+    badge.style.background = 'var(--green-light)';
+    badge.style.color = 'var(--green)';
+    badge.textContent = '✓ SET';
+    if(line) line.textContent = 'Token configured — profile changes will save directly to GitHub';
+  } else {
+    badge.style.background = 'var(--red-light)';
+    badge.style.color = 'var(--red)';
+    badge.textContent = 'NOT SET';
+    if(line) line.textContent = 'Required for saving profile changes and uploading photos directly to GitHub';
+  }
+}
+
+async function savePAT(){
+  const val = document.getElementById('patInput').value.trim();
+  const resultEl = document.getElementById('patTestResult');
+  if(!val){ resultEl.style.cssText='display:block;color:var(--red)'; resultEl.textContent='Please paste your token first.'; return; }
+
+  resultEl.style.cssText='display:block;color:var(--text2)';
+  resultEl.textContent='Testing token…';
+
+  // Test by fetching users.json via API
+  try {
+    const res = await fetch(`https://api.github.com/repos/${GITHUB_REPO}/contents/data/users.json`, {
+      headers: { 'Authorization': `Bearer ${val}`, 'Accept': 'application/vnd.github+json' }
+    });
+    if(res.status === 401){ resultEl.style.cssText='display:block;color:var(--red)'; resultEl.textContent='❌ 401 Unauthorized — token is invalid or expired. Generate a new one.'; return; }
+    if(res.status === 403){ resultEl.style.cssText='display:block;color:var(--red)'; resultEl.textContent='❌ 403 Forbidden — token exists but lacks Contents permission on this repo.'; return; }
+    if(res.status === 404){ resultEl.style.cssText='display:block;color:var(--red)'; resultEl.textContent='❌ 404 — repo or file not found. Check repo name and that users.json exists.'; return; }
+    if(!res.ok){ resultEl.style.cssText='display:block;color:var(--red)'; resultEl.textContent=`❌ Error ${res.status} — ${res.statusText}`; return; }
+
+    localStorage.setItem('ic_github_pat', val);
+    document.getElementById('patInput').value = '';
+    refreshPATStatus();
+    resultEl.style.cssText='display:block;color:var(--green)';
+    resultEl.textContent='✓ Token works! Saved to browser storage.';
+    toast('GitHub token saved ✓');
+  } catch(e){
+    resultEl.style.cssText='display:block;color:var(--red)';
+    resultEl.textContent='❌ Network error — ' + e.message;
+  }
+}
+
+function clearPAT(){
+  localStorage.removeItem('ic_github_pat');
+  document.getElementById('patInput').value = '';
+  refreshPATStatus();
+  const resultEl = document.getElementById('patTestResult');
+  resultEl.style.cssText='display:block;color:var(--text2)';
+  resultEl.textContent='Token cleared.';
+  toast('GitHub token removed.');
+}
+
 function trySettings(){
   if(!AUTH){ return; }
   if(AUTH.role !== 'admin'){
@@ -2992,6 +3094,7 @@ function trySettings(){
   goPage('settings');
   renderSettingsTable();
   renderCustomEqList();
+  refreshPATStatus();
 }
 
 function tryUsers(){
