@@ -833,7 +833,18 @@ html.light .login-logo{filter:none;}
       <div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:14px 18px;font-size:11px;color:var(--text2);margin-top:16px;line-height:1.7">
         <strong style="color:var(--text)">📧 Email</strong> — opens your mail client pre-filled with credentials &nbsp;|&nbsp;
         <strong style="color:var(--text)">💬 WhatsApp</strong> — opens WhatsApp Web with credentials &nbsp;|&nbsp;
-        <strong style="color:var(--text)">🔑 Forgot</strong> — sends admin a reset request email from that user
+        <strong style="color:var(--text)">🔑 Reset</strong> — generate a new password and notify the user
+      </div>
+
+      <!-- Activity Log -->
+      <div style="margin-top:28px">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
+          <div style="font-size:16px;font-weight:700">📋 Activity Log</div>
+          <button class="btn btn-outline btn-sm" onclick="loadActivityLog()">↻ Refresh</button>
+        </div>
+        <div id="activityLogContent">
+          <div style="font-size:12px;color:var(--text3);padding:16px 0">Click Refresh to load activity log…</div>
+        </div>
       </div>
     </div>
   </div>
@@ -913,6 +924,41 @@ html.light .login-logo{filter:none;}
       <div style="display:flex;gap:8px;margin-top:6px">
         <button class="btn btn-outline" style="flex:1" onclick="closeOverlay('editProfileOverlay')">Cancel</button>
         <button class="btn btn-primary" style="flex:1" onclick="saveProfile()">💾 Save Changes</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- RESET PASSWORD (Admin) -->
+<div class="overlay" id="resetPasswordOverlay">
+  <div class="modal" style="max-width:420px">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px">
+      <div>
+        <div class="modal-title" style="margin-bottom:0">🔑 Reset Password</div>
+        <div style="font-size:11px;color:var(--text2);margin-top:3px" id="resetPwdSubtitle">Reset password for user</div>
+      </div>
+      <button class="btn btn-ghost btn-sm" onclick="closeOverlay('resetPasswordOverlay')" style="font-size:16px">✕</button>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:12px">
+      <div class="fg">
+        <label>New Password</label>
+        <div style="display:flex;gap:8px">
+          <input type="text" id="resetPwdInput" placeholder="Enter or generate password" style="flex:1">
+          <button class="btn btn-outline btn-sm" onclick="generateResetPassword()">⚡ Generate</button>
+        </div>
+      </div>
+      <div style="display:flex;gap:8px;align-items:center">
+        <input type="checkbox" id="resetPwdNotify" checked style="cursor:pointer">
+        <label for="resetPwdNotify" style="font-size:12px;cursor:pointer">Send new credentials to user via email</label>
+      </div>
+      <div style="display:flex;gap:8px;align-items:center">
+        <input type="checkbox" id="resetPwdWhatsapp" style="cursor:pointer">
+        <label for="resetPwdWhatsapp" style="font-size:12px;cursor:pointer">Also send via WhatsApp</label>
+      </div>
+      <div id="resetPwdMsg" style="display:none;font-size:11px;padding:8px 10px;border-radius:6px"></div>
+      <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:4px">
+        <button class="btn btn-outline" onclick="closeOverlay('resetPasswordOverlay')">Cancel</button>
+        <button class="btn btn-primary" onclick="saveResetPassword()">💾 Save & Notify</button>
       </div>
     </div>
   </div>
@@ -2099,6 +2145,7 @@ function doExport(type){
     return;
   }
   toast('Export ready — check your downloads ✓');
+  logActivity('export', `Exported project "${projInfo().ref}" as ${type.toUpperCase()}`);
 }
 
 // ── PDF Export ───────────────────────────────────────────
@@ -2251,12 +2298,17 @@ function exportExcelClient(){
 
 // ── Project Status ───────────────────────────────────────
 function setProjectStatus(status){
+  const prev = S.projectStatus;
   S.projectStatus = status;
   const labels = {draft:'📝 Draft',inprogress:'⚙️ In Progress',completed:'✅ Completed',delivered:'📦 Delivered'};
   document.getElementById('currentStatusLabel').textContent = labels[status]||status;
   document.querySelectorAll('.status-btn').forEach(btn=>{
     btn.classList.toggle('active', btn.dataset.status===status);
   });
+  if(prev && prev !== status){
+    const ref = projInfo().ref || '(unsaved)';
+    logActivity('status_change', `Project "${ref}" status changed from ${prev} to ${status}`);
+  }
 }
 
 function renderExportStatus(){
@@ -2522,6 +2574,7 @@ async function doAppLogin(){
 }
 
 function doAppLogout(){
+  if(AUTH) logActivity('logout', AUTH.firstName + ' ' + AUTH.lastName + ' logged out');
   sessionStorage.removeItem('ic_auth');
   AUTH = null;
   // Reset app state
@@ -2585,7 +2638,7 @@ function onLoginSuccess(){
   loadAlarmDBFromGitHub();
 
   // Go to dashboard on login
-  setTimeout(()=>goDashboard(), 100);
+  setTimeout(()=>{ goDashboard(); logActivity('login', `${AUTH.firstName} ${AUTH.lastName} logged in`); }, 100);
 }
 
 function renderHeaderAvatar(){
@@ -2799,13 +2852,14 @@ function renderUsersTable(users){
       btnWrap.appendChild(btnWA);
     }
 
-    if(u.email){
-      const btnForgot = document.createElement('button');
-      btnForgot.className = 'btn-icon forgot';
-      btnForgot.title = 'Send reset request';
-      btnForgot.textContent = '🔑';
-      btnForgot.onclick = () => sendAdminResetEmail(u);
-      btnWrap.appendChild(btnForgot);
+    // Admin reset password button
+    if(AUTH && AUTH.username !== u.username){
+      const btnReset = document.createElement('button');
+      btnReset.className = 'btn-icon forgot';
+      btnReset.title = 'Reset password';
+      btnReset.textContent = '🔑';
+      btnReset.onclick = () => openResetPassword(u);
+      btnWrap.appendChild(btnReset);
     }
 
     tdActions.appendChild(btnWrap);
@@ -2890,6 +2944,203 @@ Miguel Faraj
 Insightech`
   );
   window.open(`mailto:${to}?subject=${subject}&body=${body}`);
+}
+
+// ══════════════════════════════════════════════════
+//  ADMIN PASSWORD RESET
+// ══════════════════════════════════════════════════
+let _resetTarget = null;
+
+function openResetPassword(u){
+  _resetTarget = u;
+  document.getElementById('resetPwdSubtitle').textContent = `Reset password for ${u.firstName} ${u.lastName} (@${u.username})`;
+  document.getElementById('resetPwdInput').value = '';
+  document.getElementById('resetPwdNotify').checked = true;
+  document.getElementById('resetPwdWhatsapp').checked = false;
+  document.getElementById('resetPwdMsg').style.display = 'none';
+  generateResetPassword();
+  openOverlay('resetPasswordOverlay');
+}
+
+function generateResetPassword(){
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789!@#$%';
+  let pwd = '';
+  while(true){
+    pwd = Array.from({length:10}, ()=>chars[Math.floor(Math.random()*chars.length)]).join('');
+    if(/[A-Z]/.test(pwd) && /[a-z]/.test(pwd) && /[0-9]/.test(pwd) && /[!@#$%]/.test(pwd)) break;
+  }
+  document.getElementById('resetPwdInput').value = pwd;
+}
+
+async function saveResetPassword(){
+  const u = _resetTarget;
+  if(!u) return;
+  const newPass = document.getElementById('resetPwdInput').value.trim();
+  const msgEl = document.getElementById('resetPwdMsg');
+  msgEl.style.display = 'none';
+
+  if(newPass.length < 8){
+    msgEl.style.cssText = 'display:block;color:var(--red);background:var(--red-light);border-radius:6px;padding:8px 10px;font-size:11px';
+    msgEl.textContent = 'Password must be at least 8 characters.';
+    return;
+  }
+
+  const btn = document.querySelector('#resetPasswordOverlay .btn-primary');
+  if(btn){ btn.textContent = '⏳ Saving…'; btn.disabled = true; }
+
+  try {
+    // Hash the new password
+    const newHash = await sha256(newPass);
+
+    // Fetch latest users.json
+    const fileData = await githubGetFile('data/users.json');
+    const users = JSON.parse(atob(fileData.content.replace(/\n/g,'')));
+    const idx = users.findIndex(x => x.username === u.username);
+    if(idx === -1) throw new Error('User not found in users.json');
+
+    users[idx].passwordHash = newHash;
+    users[idx].password = newPass;
+
+    // Save back
+    await githubPutFile('data/users.json', JSON.stringify(users, null, 2), fileData.sha, `Reset password for ${u.username}`);
+
+    // Update cache
+    ALL_USERS_CACHE = users;
+    const embIdx = EMBEDDED_USERS.findIndex(x => x.username === u.username);
+    if(embIdx !== -1){ EMBEDDED_USERS[embIdx].passwordHash = newHash; EMBEDDED_USERS[embIdx].password = newPass; }
+
+    // Log activity
+    await logActivity('password_reset', `Admin reset password for ${u.firstName} ${u.lastName} (@${u.username})`);
+
+    // Send notifications
+    const updatedUser = {...u, password: newPass};
+    if(document.getElementById('resetPwdNotify').checked && u.email){
+      sendCredentialsEmail(updatedUser);
+    }
+    if(document.getElementById('resetPwdWhatsapp').checked && u.phone){
+      sendCredentialsWhatsApp(updatedUser);
+    }
+
+    closeOverlay('resetPasswordOverlay');
+    toast(`Password reset for ${u.firstName} ✓`);
+    renderUsersPage();
+
+  } catch(e){
+    msgEl.style.cssText = 'display:block;color:var(--red);background:var(--red-light);border-radius:6px;padding:8px 10px;font-size:11px';
+    msgEl.textContent = '❌ ' + e.message;
+  } finally {
+    if(btn){ btn.textContent = '💾 Save & Notify'; btn.disabled = false; }
+  }
+}
+
+// ══════════════════════════════════════════════════
+//  ACTIVITY LOG
+// ══════════════════════════════════════════════════
+async function logActivity(type, message){
+  if(!AUTH) return;
+  try {
+    const logPath = 'data/activity.json';
+    let entries = [];
+    let sha = undefined;
+    try {
+      const file = await githubGetFile(logPath);
+      sha = file.sha;
+      entries = JSON.parse(atob(file.content.replace(/\n/g,'')));
+    } catch(e){ /* first entry */ }
+
+    entries.unshift({
+      timestamp: new Date().toISOString(),
+      user: AUTH.username,
+      name: AUTH.firstName + ' ' + AUTH.lastName,
+      role: AUTH.role,
+      type,
+      message
+    });
+
+    // Keep last 500 entries
+    if(entries.length > 500) entries = entries.slice(0, 500);
+
+    await githubPutFile(logPath, JSON.stringify(entries, null, 2), sha, `Activity: ${type} by ${AUTH.username}`);
+  } catch(e){
+    console.warn('Activity log failed:', e.message);
+  }
+}
+
+async function loadActivityLog(){
+  const container = document.getElementById('activityLogContent');
+  if(!container) return;
+  container.innerHTML = '<div style="font-size:12px;color:var(--text3)">Loading…</div>';
+
+  try {
+    const file = await githubGetFile('data/activity.json');
+    const entries = JSON.parse(atob(file.content.replace(/\n/g,'')));
+
+    if(!entries.length){
+      container.innerHTML = '<div style="font-size:12px;color:var(--text3);padding:12px 0">No activity recorded yet.</div>';
+      return;
+    }
+
+    const typeIcon = {
+      login:'🔐', logout:'🚪', project_save:'💾', project_delete:'🗑',
+      project_open:'📂', password_reset:'🔑', status_change:'🏷',
+      profile_update:'✏️', export:'📤'
+    };
+
+    container.innerHTML = `
+      <div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;overflow:hidden">
+        <table style="width:100%;border-collapse:collapse">
+          <thead><tr style="background:var(--surface2)">
+            <th style="font-family:'DM Mono',monospace;font-size:9px;letter-spacing:2px;text-transform:uppercase;color:var(--text3);padding:9px 14px;text-align:left;border-bottom:1.5px solid var(--border)">Time</th>
+            <th style="font-family:'DM Mono',monospace;font-size:9px;letter-spacing:2px;text-transform:uppercase;color:var(--text3);padding:9px 14px;text-align:left;border-bottom:1.5px solid var(--border)">User</th>
+            <th style="font-family:'DM Mono',monospace;font-size:9px;letter-spacing:2px;text-transform:uppercase;color:var(--text3);padding:9px 14px;text-align:left;border-bottom:1.5px solid var(--border)">Activity</th>
+          </tr></thead>
+          <tbody>
+            ${entries.slice(0,100).map(e=>`<tr style="border-bottom:1px solid var(--border)">
+              <td style="padding:8px 14px;font-size:11px;color:var(--text3);white-space:nowrap;font-family:'DM Mono',monospace">${new Date(e.timestamp).toLocaleString()}</td>
+              <td style="padding:8px 14px;font-size:12px;white-space:nowrap">
+                <div style="font-weight:500">${esc(e.name||e.user)}</div>
+                <div style="font-size:10px;color:var(--text3)">${esc(e.role||'')}</div>
+              </td>
+              <td style="padding:8px 14px;font-size:12px">
+                <span style="margin-right:6px">${typeIcon[e.type]||'📌'}</span>${esc(e.message||e.type)}
+              </td>
+            </tr>`).join('')}
+          </tbody>
+        </table>
+        ${entries.length>100?`<div style="padding:10px 14px;font-size:11px;color:var(--text3);background:var(--surface2)">Showing latest 100 of ${entries.length} entries. Full log in <code>data/activity.json</code></div>`:''}
+      </div>`;
+  } catch(e){
+    if(e.message.includes('404') || e.message.includes('500')){
+      container.innerHTML = '<div style="font-size:12px;color:var(--text3);padding:12px 0">No activity recorded yet.</div>';
+    } else {
+      container.innerHTML = `<div style="font-size:12px;color:var(--red)">${esc(e.message)}</div>`;
+    }
+  }
+}
+
+// ══════════════════════════════════════════════════
+//  EMAIL NOTIFICATIONS (mailto)
+// ══════════════════════════════════════════════════
+function notifyAdminProjectSaved(projectRef, status){
+  // Only notify on significant status changes, not every save
+  if(!['completed','delivered'].includes(status)) return;
+  const adminEmail = (ALL_USERS_CACHE.find(u=>u.role==='admin')||EMBEDDED_USERS.find(u=>u.role==='admin')||{}).email||'miguel.faraj@insightech.com';
+  if(AUTH && AUTH.role === 'admin') return; // don't notify yourself
+  const statusLabel = {completed:'✅ Completed',delivered:'📦 Delivered'}[status]||status;
+  const subject = encodeURIComponent(`[Project Update] ${projectRef} marked as ${statusLabel}`);
+  const body = encodeURIComponent(
+`Hi Miguel,
+
+${AUTH.firstName} ${AUTH.lastName} has updated project "${projectRef}" to status: ${statusLabel}
+
+👤 Engineer: ${AUTH.firstName} ${AUTH.lastName} (@${AUTH.username})
+📅 Date: ${new Date().toLocaleString()}
+🔗 App: https://miguelfaraj-eng.github.io/alarms_configurator/
+
+Regards,
+Insightech Alarms Configurator`
+  );
+  window.open(`mailto:${adminEmail}?subject=${subject}&body=${body}`);
 }
 
 // ══════════════════════════════════════════════════
@@ -3179,6 +3430,7 @@ function tryUsers(){
   if(!AUTH || AUTH.role !== 'admin'){ toast('User Management is restricted to Admins.', 'err'); return; }
   goPage('users');
   renderUsersPage();
+  loadActivityLog();
 }
 
 // ══════════════════════════════════════════════════
@@ -3304,6 +3556,8 @@ async function saveProjectToGitHub(){
     });
 
     toast(`Project "${ref}" saved to GitHub ✓`);
+    await logActivity('project_save', `Saved project "${ref}" (${snap.info?.projectName||''}) — status: ${S.projectStatus||'draft'}`);
+    notifyAdminProjectSaved(ref, S.projectStatus||'draft');
   } catch(e){
     toast('Save failed: ' + e.message,'err');
   } finally {
@@ -3544,6 +3798,7 @@ function openProject(snapJson){
     updateStats();
 
     toast(`Project "${info.projectRef || info.projectName || 'unknown'}" opened ✓`);
+    logActivity('project_open', `Opened project "${info.projectRef||''}" (${info.projectName||''}) by ${info.engineerName||''}`);
     goPage('configure');
 
   } catch(e){
@@ -3562,6 +3817,7 @@ async function deleteProject(userName, folderName){
       sha: fileData.sha
     });
     toast(`Project "${folderName}" deleted ✓`);
+    await logActivity('project_delete', `Deleted project "${folderName}" (owner: ${userName})`);
     loadDashboard();
   } catch(e){
     toast('Delete failed: ' + e.message, 'err');
