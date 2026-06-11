@@ -375,13 +375,6 @@ html.light .login-logo{filter:none;}
 .status-btn{padding:6px 14px;border-radius:8px;border:1.5px solid var(--border);background:var(--surface2);cursor:pointer;font-size:12px;color:var(--text2);transition:all .15s}
 .status-btn:hover,.status-btn.active{border-color:var(--accent);background:var(--accent-light);color:var(--accent);font-weight:600}
 
-/* ── PRIORITY EDITOR ─────────────────────────────────── */
-.prio-table{width:100%;border-collapse:collapse}
-.prio-table th{font-family:'DM Mono',monospace;font-size:9px;letter-spacing:2px;text-transform:uppercase;color:var(--text3);padding:8px 12px;text-align:left;border-bottom:1.5px solid var(--border)}
-.prio-table td{padding:7px 12px;border-bottom:1px solid var(--border);font-size:12px;vertical-align:middle}
-.prio-table tr:last-child td{border-bottom:none}
-.prio-select{padding:4px 8px;border-radius:6px;border:1px solid var(--border);background:var(--surface2);color:var(--text);font-size:11px;cursor:pointer}
-
 /* ── DASH STATS ──────────────────────────────────────── */
 .dash-stat-card{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:14px 16px}
 .dash-stat-val{font-size:24px;font-weight:700;color:var(--accent);margin-bottom:2px}
@@ -624,7 +617,6 @@ html.light .login-logo{filter:none;}
             <button class="btn btn-sm btn-outline" onclick="bulkDisableAll()">✕ Disable All</button>
             <button class="btn btn-sm btn-outline" onclick="toggleDeletedView()">🗑 Show Deleted</button>
             <button class="btn btn-sm btn-outline" onclick="restoreAll()">↺ Restore All</button>
-            <button class="btn btn-sm btn-outline" onclick="openPriorityEditor()">⚡ Priorities</button>
           </div>
         </div>
         <!-- Alarm table -->
@@ -922,26 +914,6 @@ html.light .login-logo{filter:none;}
         <button class="btn btn-outline" style="flex:1" onclick="closeOverlay('editProfileOverlay')">Cancel</button>
         <button class="btn btn-primary" style="flex:1" onclick="saveProfile()">💾 Save Changes</button>
       </div>
-    </div>
-  </div>
-</div>
-
-<!-- PRIORITY EDITOR -->
-<div class="overlay" id="priorityEditorOverlay">
-  <div class="modal" style="max-width:560px;max-height:80vh;overflow-y:auto">
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
-      <div>
-        <div class="modal-title" style="margin-bottom:0">⚡ Priority Editor</div>
-        <div style="font-size:11px;color:var(--text2);margin-top:3px" id="prioEditorSubtitle">Set alarm priorities for this entity</div>
-      </div>
-      <button class="btn btn-ghost btn-sm" onclick="closeOverlay('priorityEditorOverlay')" style="font-size:16px">✕</button>
-    </div>
-    <div style="overflow-x:auto">
-      <table class="prio-table" id="prioEditorTable"></table>
-    </div>
-    <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:16px">
-      <button class="btn btn-outline" onclick="closeOverlay('priorityEditorOverlay')">Cancel</button>
-      <button class="btn btn-primary" onclick="savePriorities()">Save Priorities</button>
     </div>
   </div>
 </div>
@@ -1746,58 +1718,6 @@ function bulkDisableAll(){
 }
 
 // ── Priority Editor ──────────────────────────────────────
-function openPriorityEditor(){
-  const key = S.activeEntity;
-  if(!key || !S.entityAlarms[key]) return;
-  const entity = S.entityAlarms[key];
-  document.getElementById('prioEditorSubtitle').textContent = `${entity.eqName} — ${key}`;
-
-  const table = document.getElementById('prioEditorTable');
-  table.innerHTML = `<thead><tr>
-    <th>Alarm Type</th>
-    <th>Alarm Name</th>
-    <th style="text-align:center">Priority</th>
-  </tr></thead><tbody>${
-    entity.alarmGroups.flatMap((g,gi) =>
-      g.alarms.map((a,ai) => `<tr>
-        <td style="color:var(--text3)">${esc(g.alarmType)}</td>
-        <td style="font-weight:500">${esc(a.name)}</td>
-        <td style="text-align:center">
-          <select class="prio-select" data-gi="${gi}" data-ai="${ai}">
-            <option value="" ${a.priority==null?'selected':''}>—</option>
-            <option value="0" ${a.priority===0?'selected':''}>0 — Critical</option>
-            <option value="1" ${a.priority===1?'selected':''}>1 — High</option>
-            <option value="2" ${a.priority===2?'selected':''}>2 — Medium</option>
-            <option value="3" ${a.priority===3?'selected':''}>3 — Low</option>
-            <option value="4" ${a.priority===4?'selected':''}>4 — Info</option>
-            <option value="5" ${a.priority===5?'selected':''}>5 — Warning</option>
-          </select>
-        </td>
-      </tr>`)
-    ).join('')
-  }</tbody>`;
-  openOverlay('priorityEditorOverlay');
-}
-
-function savePriorities(){
-  const key = S.activeEntity;
-  if(!key || !S.entityAlarms[key]) return;
-  const entity = S.entityAlarms[key];
-  document.querySelectorAll('#prioEditorTable .prio-select').forEach(sel => {
-    const gi = parseInt(sel.dataset.gi);
-    const ai = parseInt(sel.dataset.ai);
-    const val = sel.value;
-    if(entity.alarmGroups[gi] && entity.alarmGroups[gi].alarms[ai]){
-      entity.alarmGroups[gi].alarms[ai].priority = val === '' ? null : parseInt(val);
-    }
-  });
-  closeOverlay('priorityEditorOverlay');
-  renderAlarmTable(key);
-  toast('Priorities updated ✓');
-}
-
-
-
 function filterAlarms(){ renderAlarmTable(S.activeEntity); renderCatList(); }
 
 function renderAlarmTypes(entityKey){
