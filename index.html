@@ -1553,6 +1553,7 @@ function goEquipment(){
   buildEntityAlarms();
   renderQtyPanel();
   renderSidebarConfig();
+  renderCustomAlarmList();
   goPage('configure');
   updateStats();
 }
@@ -3218,9 +3219,6 @@ Insightech Alarms Configurator`
 // ══════════════════════════════════════════════════
 //  EDIT PROFILE
 // ══════════════════════════════════════════════════
-// ══════════════════════════════════════════════════
-//  EDIT PROFILE
-// ══════════════════════════════════════════════════
 function openEditProfile(){
   if(!AUTH) return;
 
@@ -3352,21 +3350,6 @@ Thanks`
   window.open(`mailto:${adminEmail}?subject=${subject}&body=${body}`);
   msgEl.style.cssText = 'display:block;color:var(--green);background:var(--green-light);border-radius:6px;padding:8px 10px;font-size:11px';
   msgEl.textContent = 'Reset request opened in your email client ✓ The admin will contact you shortly.';
-}
-
-// ══════════════════════════════════════════════════
-//  GITHUB API — all calls go through Vercel proxy
-// ══════════════════════════════════════════════════
-async function githubGetFile(path){
-  return await githubRequest('GET', path);
-}
-
-async function githubPutFile(path, rawContent, sha, message){
-  return await githubRequest('PUT', path, {
-    message,
-    rawContent,
-    ...(sha ? { sha } : {})
-  });
 }
 
 async function saveUsersToGitHub(updatedUsers){
@@ -3645,7 +3628,7 @@ async function saveProjectToGitHub(){
     await saveVersion(userName, ref, snapshot, versionNum);
 
     toast(`Project "${ref}" saved to GitHub ✓`);
-    await logActivity('project_save', `Saved project "${ref}" (${snap.info?.projectName||''}) — status: ${S.projectStatus||'draft'}`);
+    await logActivity('project_save', `Saved project "${ref}" (${snapshot.info?.projectName||''}) v${versionNum} — status: ${S.projectStatus||'draft'}`);
     notifyAdminProjectSaved(ref, S.projectStatus||'draft');
   } catch(e){
     toast('Save failed: ' + e.message,'err');
@@ -3700,7 +3683,7 @@ async function loadDashboard(){
       let projectFolders = [];
       try {
         const data = await githubRequest('GET', `Projects/${userFolder.name}`);
-        projectFolders = Array.isArray(data) ? data.filter(f=>f.type==='dir') : [];
+        projectFolders = Array.isArray(data) ? data.filter(f=>f.type==='dir' && f.name !== 'versions') : [];
       } catch(e){ continue; }
 
       const projects = [];
@@ -3820,17 +3803,17 @@ function renderDashCards(groups){
         <div class="proj-card-footer">
           <span class="proj-stat">${eqCount} eq. type${eqCount!==1?'s':''}</span>
           <div style="margin-left:auto;display:flex;gap:6px">
-            <button class="btn btn-primary btn-sm" id="open-${esc(folderName)}">▶ Open</button>
-            <button class="btn btn-outline btn-sm" id="hist-${esc(folderName)}" title="Version history">🕐</button>
-            <button class="btn btn-outline btn-sm" id="dup-${esc(folderName)}" title="Duplicate">⧉</button>
-            <button class="btn btn-outline btn-sm" style="color:var(--red);border-color:var(--red)" id="del-${esc(folderName)}">🗑</button>
+            <button class="btn btn-primary btn-sm proj-open-btn">▶ Open</button>
+            <button class="btn btn-outline btn-sm proj-hist-btn" title="Version history">🕐</button>
+            <button class="btn btn-outline btn-sm proj-dup-btn" title="Duplicate">⧉</button>
+            <button class="btn btn-outline btn-sm proj-del-btn" style="color:var(--red);border-color:var(--red)">🗑</button>
           </div>
         </div>`;
 
-      card.querySelector(`#open-${esc(folderName)}`).addEventListener('click', ()=>{ openProject(card.dataset.snap); });
-      card.querySelector(`#hist-${esc(folderName)}`).addEventListener('click', (e)=>{ e.stopPropagation(); openVersionHistory(group.userName, folderName); });
-      card.querySelector(`#dup-${esc(folderName)}`).addEventListener('click', (e)=>{ e.stopPropagation(); duplicateProject(card.dataset.snap, userName); });
-      card.querySelector(`#del-${esc(folderName)}`).addEventListener('click', (e)=>{ e.stopPropagation(); deleteProject(userName, folderName); });
+      card.querySelector('.proj-open-btn').addEventListener('click', ()=>{ openProject(card.dataset.snap); });
+      card.querySelector('.proj-hist-btn').addEventListener('click', (e)=>{ e.stopPropagation(); openVersionHistory(group.userName, folderName); });
+      card.querySelector('.proj-dup-btn').addEventListener('click', (e)=>{ e.stopPropagation(); duplicateProject(card.dataset.snap, userName); });
+      card.querySelector('.proj-del-btn').addEventListener('click', (e)=>{ e.stopPropagation(); deleteProject(userName, folderName); });
       grid.appendChild(card);
     });
 
