@@ -366,7 +366,27 @@ html.light .login-logo{filter:none;}
 .btn-icon.whatsapp:hover{background:var(--green-light);border-color:var(--green);color:var(--green);}
 .btn-icon.forgot:hover{background:var(--orange-light);border-color:var(--orange);color:var(--orange);}
 
-/* ── DASHBOARD ───────────────────────────────────────── */
+/* ── STATUS BADGES ───────────────────────────────────── */
+.status-badge{font-size:9px;font-weight:700;padding:2px 8px;border-radius:10px;text-transform:uppercase;letter-spacing:1px}
+.status-draft{background:var(--surface2);color:var(--text3);border:1px solid var(--border)}
+.status-inprogress{background:var(--accent-light);color:var(--accent)}
+.status-completed{background:var(--green-light);color:var(--green)}
+.status-delivered{background:var(--purple-light);color:var(--purple)}
+.status-btn{padding:6px 14px;border-radius:8px;border:1.5px solid var(--border);background:var(--surface2);cursor:pointer;font-size:12px;color:var(--text2);transition:all .15s}
+.status-btn:hover,.status-btn.active{border-color:var(--accent);background:var(--accent-light);color:var(--accent);font-weight:600}
+
+/* ── PRIORITY EDITOR ─────────────────────────────────── */
+.prio-table{width:100%;border-collapse:collapse}
+.prio-table th{font-family:'DM Mono',monospace;font-size:9px;letter-spacing:2px;text-transform:uppercase;color:var(--text3);padding:8px 12px;text-align:left;border-bottom:1.5px solid var(--border)}
+.prio-table td{padding:7px 12px;border-bottom:1px solid var(--border);font-size:12px;vertical-align:middle}
+.prio-table tr:last-child td{border-bottom:none}
+.prio-select{padding:4px 8px;border-radius:6px;border:1px solid var(--border);background:var(--surface2);color:var(--text);font-size:11px;cursor:pointer}
+
+/* ── DASH STATS ──────────────────────────────────────── */
+.dash-stat-card{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:14px 16px}
+.dash-stat-val{font-size:24px;font-weight:700;color:var(--accent);margin-bottom:2px}
+.dash-stat-lbl{font-size:11px;color:var(--text2)}
+
 .dash-page{padding:28px;max-width:1100px;margin:0 auto;width:100%}
 .dash-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:24px;flex-wrap:wrap;gap:12px}
 .proj-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:14px}
@@ -600,8 +620,11 @@ html.light .login-logo{filter:none;}
           <span class="alarm-hdr-badge b-o" id="alarmHdrBadge" style="display:none"></span>
           <span class="alarm-hdr-count" id="alarmHdrCount"></span>
           <div class="alarm-hdr-actions" id="alarmHdrActions" style="display:none">
+            <button class="btn btn-sm btn-outline" onclick="bulkEnableAll()">✓ Enable All</button>
+            <button class="btn btn-sm btn-outline" onclick="bulkDisableAll()">✕ Disable All</button>
             <button class="btn btn-sm btn-outline" onclick="toggleDeletedView()">🗑 Show Deleted</button>
             <button class="btn btn-sm btn-outline" onclick="restoreAll()">↺ Restore All</button>
+            <button class="btn btn-sm btn-outline" onclick="openPriorityEditor()">⚡ Priorities</button>
           </div>
         </div>
         <!-- Alarm table -->
@@ -623,7 +646,7 @@ html.light .login-logo{filter:none;}
       </div>
       <div class="sum-stat-row" id="sumStats"></div>
       <div id="sumEquipTable" style="margin-bottom:24px"></div>
-      <div class="card">
+      <div class="card" style="margin-bottom:16px">
         <div style="font-size:13px;font-weight:600;margin-bottom:14px;">Export Configuration</div>
         <div style="font-size:12px;color:var(--text2);margin-bottom:16px;">Each export includes project info, selected equipment with quantities, and all associated alarm definitions (respecting any deletions you made).</div>
         <div class="export-grid">
@@ -639,7 +662,26 @@ html.light .login-logo{filter:none;}
             <div class="export-icon" style="background:var(--orange-light)">🔶</div>
             <div><div class="export-name">Export SCL — Rockwell</div><div class="export-desc">Structured Text for Studio 5000 / RSLogix 5000 (Allen-Bradley PLCs)</div></div>
           </div>
+          <div class="export-opt" onclick="doExport('pdf')">
+            <div class="export-icon" style="background:var(--red-light)">📄</div>
+            <div><div class="export-name">Export PDF Report</div><div class="export-desc">Full project report with cover page, equipment summary, and complete alarm list</div></div>
+          </div>
+          <div class="export-opt" onclick="doExport('excel')">
+            <div class="export-icon" style="background:var(--green-light)">📗</div>
+            <div><div class="export-name">Export Excel (Client)</div><div class="export-desc">Formatted Excel workbook for client delivery with separate sheets per equipment</div></div>
+          </div>
         </div>
+      </div>
+      <!-- Project Status -->
+      <div class="card" style="margin-bottom:16px">
+        <div style="font-size:13px;font-weight:600;margin-bottom:12px">Project Status</div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <button class="status-btn" data-status="draft" onclick="setProjectStatus('draft')">📝 Draft</button>
+          <button class="status-btn" data-status="inprogress" onclick="setProjectStatus('inprogress')">⚙️ In Progress</button>
+          <button class="status-btn" data-status="completed" onclick="setProjectStatus('completed')">✅ Completed</button>
+          <button class="status-btn" data-status="delivered" onclick="setProjectStatus('delivered')">📦 Delivered</button>
+        </div>
+        <div style="font-size:11px;color:var(--text2);margin-top:8px">Current: <span id="currentStatusLabel" style="font-weight:600">Draft</span></div>
       </div>
       <div class="actions">
         <button class="btn btn-outline" onclick="goPage('configure')">← Back to Configure</button>
@@ -656,7 +698,23 @@ html.light .login-logo{filter:none;}
           <div style="font-size:22px;font-weight:700">📁 My Projects</div>
           <div style="font-size:12px;color:var(--text2);margin-top:3px" id="dashSubtitle">Loading projects…</div>
         </div>
-        <button class="btn btn-primary" onclick="goPage('project');resetWizard()">+ New Project</button>
+        <button class="btn btn-primary" onclick="resetWizard();goPage('project')">+ New Project</button>
+      </div>
+      <!-- Dashboard stats -->
+      <div id="dashStats" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:10px;margin-bottom:20px"></div>
+      <!-- Search & filter -->
+      <div style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap">
+        <div class="um-search-wrap" style="flex:1;min-width:200px">
+          <span class="um-search-icon">⌕</span>
+          <input type="text" class="um-search" id="dashSearch" placeholder="Search projects, clients, sites…" oninput="filterDashboard()">
+        </div>
+        <select id="dashStatusFilter" onchange="filterDashboard()" style="padding:7px 10px;border-radius:8px;border:1.5px solid var(--border);background:var(--surface2);color:var(--text);font-size:12px;outline:none">
+          <option value="">All Statuses</option>
+          <option value="draft">📝 Draft</option>
+          <option value="inprogress">⚙️ In Progress</option>
+          <option value="completed">✅ Completed</option>
+          <option value="delivered">📦 Delivered</option>
+        </select>
       </div>
       <div id="dashContent"></div>
     </div>
@@ -868,6 +926,26 @@ html.light .login-logo{filter:none;}
   </div>
 </div>
 
+<!-- PRIORITY EDITOR -->
+<div class="overlay" id="priorityEditorOverlay">
+  <div class="modal" style="max-width:560px;max-height:80vh;overflow-y:auto">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
+      <div>
+        <div class="modal-title" style="margin-bottom:0">⚡ Priority Editor</div>
+        <div style="font-size:11px;color:var(--text2);margin-top:3px" id="prioEditorSubtitle">Set alarm priorities for this entity</div>
+      </div>
+      <button class="btn btn-ghost btn-sm" onclick="closeOverlay('priorityEditorOverlay')" style="font-size:16px">✕</button>
+    </div>
+    <div style="overflow-x:auto">
+      <table class="prio-table" id="prioEditorTable"></table>
+    </div>
+    <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:16px">
+      <button class="btn btn-outline" onclick="closeOverlay('priorityEditorOverlay')">Cancel</button>
+      <button class="btn btn-primary" onclick="savePriorities()">Save Priorities</button>
+    </div>
+  </div>
+</div>
+
 <!-- ADD EQUIPMENT -->
 <div class="overlay" id="addEqOverlay">
   <div class="modal" style="max-width:480px">
@@ -980,6 +1058,7 @@ const S = {
   customAlarms: [],
 
   commonAlarms: [],   // generated by common alarms wizard
+  projectStatus: 'draft', // draft | inprogress | completed | delivered
   customEquipment: [], // added via Settings
   activeAlarmTypeFilter: '',  // alarm type name filter in configure view
 
@@ -1647,6 +1726,78 @@ function restoreAll(){
   }
 }
 
+// ── Bulk enable/disable ──────────────────────────────────
+function bulkEnableAll(){
+  if(!S.activeEntity || !S.entityAlarms[S.activeEntity]) return;
+  S.entityAlarms[S.activeEntity].alarmGroups.forEach(g=>g.alarms.forEach(a=>a.deleted=false));
+  renderAlarmTable(S.activeEntity);
+  renderQtyPanel();
+  renderSidebarConfig();
+  toast('All alarms enabled ✓');
+}
+
+function bulkDisableAll(){
+  if(!S.activeEntity || !S.entityAlarms[S.activeEntity]) return;
+  S.entityAlarms[S.activeEntity].alarmGroups.forEach(g=>g.alarms.forEach(a=>a.deleted=true));
+  renderAlarmTable(S.activeEntity);
+  renderQtyPanel();
+  renderSidebarConfig();
+  toast('All alarms disabled ✓');
+}
+
+// ── Priority Editor ──────────────────────────────────────
+function openPriorityEditor(){
+  const key = S.activeEntity;
+  if(!key || !S.entityAlarms[key]) return;
+  const entity = S.entityAlarms[key];
+  document.getElementById('prioEditorSubtitle').textContent = `${entity.eqName} — ${key}`;
+
+  const table = document.getElementById('prioEditorTable');
+  table.innerHTML = `<thead><tr>
+    <th>Alarm Type</th>
+    <th>Alarm Name</th>
+    <th style="text-align:center">Priority</th>
+  </tr></thead><tbody>${
+    entity.alarmGroups.flatMap((g,gi) =>
+      g.alarms.map((a,ai) => `<tr>
+        <td style="color:var(--text3)">${esc(g.alarmType)}</td>
+        <td style="font-weight:500">${esc(a.name)}</td>
+        <td style="text-align:center">
+          <select class="prio-select" data-gi="${gi}" data-ai="${ai}">
+            <option value="" ${a.priority==null?'selected':''}>—</option>
+            <option value="0" ${a.priority===0?'selected':''}>0 — Critical</option>
+            <option value="1" ${a.priority===1?'selected':''}>1 — High</option>
+            <option value="2" ${a.priority===2?'selected':''}>2 — Medium</option>
+            <option value="3" ${a.priority===3?'selected':''}>3 — Low</option>
+            <option value="4" ${a.priority===4?'selected':''}>4 — Info</option>
+            <option value="5" ${a.priority===5?'selected':''}>5 — Warning</option>
+          </select>
+        </td>
+      </tr>`)
+    ).join('')
+  }</tbody>`;
+  openOverlay('priorityEditorOverlay');
+}
+
+function savePriorities(){
+  const key = S.activeEntity;
+  if(!key || !S.entityAlarms[key]) return;
+  const entity = S.entityAlarms[key];
+  document.querySelectorAll('#prioEditorTable .prio-select').forEach(sel => {
+    const gi = parseInt(sel.dataset.gi);
+    const ai = parseInt(sel.dataset.ai);
+    const val = sel.value;
+    if(entity.alarmGroups[gi] && entity.alarmGroups[gi].alarms[ai]){
+      entity.alarmGroups[gi].alarms[ai].priority = val === '' ? null : parseInt(val);
+    }
+  });
+  closeOverlay('priorityEditorOverlay');
+  renderAlarmTable(key);
+  toast('Priorities updated ✓');
+}
+
+
+
 function filterAlarms(){ renderAlarmTable(S.activeEntity); renderCatList(); }
 
 function renderAlarmTypes(entityKey){
@@ -1844,6 +1995,7 @@ function renderExport(){
   const totalUnits = entities.length;
   const eqTypes = [...new Set(entities.map(([,e])=>e.eqName))].length;
   const cats = [...new Set(entities.flatMap(([,e])=>(e.alarmGroups||[]).map(g=>g.category).filter(Boolean)))].length;
+  renderExportStatus();
 
   const commonActiveCount = (S.commonAlarms||[]).filter(a=>!a.deleted).length;
   document.getElementById('sumStats').innerHTML=`
@@ -2018,7 +2170,178 @@ function doExport(type){
     }
     dl(pn+' Alarm List Rockwell.L5X', lines.join('\n'), 'text/plain');
   }
+  else if(type==='pdf'){
+    exportPDF();
+    return;
+  }
+  else if(type==='excel'){
+    exportExcelClient();
+    return;
+  }
   toast('Export ready — check your downloads ✓');
+}
+
+// ── PDF Export ───────────────────────────────────────────
+function exportPDF(){
+  const p = projInfo();
+  const entities = Object.entries(S.entityAlarms);
+  const totalAlarms = entities.reduce((s,[,e])=>s+(e.alarmGroups||[]).reduce((ss,g)=>ss+g.alarms.filter(a=>!a.deleted).length,0),0);
+  const statusLabel = {draft:'Draft',inprogress:'In Progress',completed:'Completed',delivered:'Delivered'}[S.projectStatus||'draft']||'Draft';
+
+  const html = `<!DOCTYPE html><html><head><meta charset="utf-8">
+  <title>${esc(p.name)} - Alarm List</title>
+  <style>
+    body{font-family:Arial,sans-serif;color:#1a1a2e;margin:0;padding:0;font-size:11px}
+    .cover{background:linear-gradient(135deg,#1a1a2e,#2d2d5e);color:#fff;padding:60px 50px;min-height:260px;page-break-after:always}
+    .cover h1{font-size:28px;margin:0 0 8px;font-weight:700}
+    .cover .ref{font-size:14px;opacity:.7;margin-bottom:30px;font-family:monospace}
+    .cover table{border-collapse:collapse;width:100%}
+    .cover td{padding:6px 0;font-size:12px;border-bottom:1px solid rgba(255,255,255,.15);opacity:.9}
+    .cover td:first-child{opacity:.6;width:140px}
+    .section{padding:30px 40px}
+    .section h2{font-size:16px;border-bottom:2px solid #2d2d5e;padding-bottom:8px;margin-bottom:16px;color:#1a1a2e}
+    .stats-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:24px}
+    .stat-box{background:#f5f5f5;border-radius:6px;padding:12px;text-align:center}
+    .stat-val{font-size:22px;font-weight:700;color:#2d2d5e}
+    .stat-lbl{font-size:10px;color:#666;margin-top:2px}
+    table{width:100%;border-collapse:collapse;margin-bottom:20px}
+    th{background:#2d2d5e;color:#fff;padding:7px 10px;text-align:left;font-size:10px;letter-spacing:.5px}
+    td{padding:6px 10px;border-bottom:1px solid #eee;font-size:10px}
+    tr:nth-child(even) td{background:#fafafa}
+    .entity-header{background:#e8e8f0;font-weight:700;font-size:11px;color:#1a1a2e;padding:10px}
+    .badge{padding:2px 6px;border-radius:3px;font-size:9px;font-weight:700;text-transform:uppercase}
+    .p0{background:#ffcccc;color:#cc0000}.p5{background:#fff3cc;color:#cc7700}.pn{background:#eee;color:#666}
+    @media print{body{-webkit-print-color-adjust:exact;print-color-adjust:exact}}
+  </style></head><body>
+  <div class="cover">
+    <h1>${esc(p.name)}</h1>
+    <div class="ref">${esc(p.ref)}</div>
+    <table><tr><td>Client</td><td>${esc(p.client)}</td></tr>
+    <tr><td>Site / Location</td><td>${esc(p.site)}</td></tr>
+    <tr><td>Engineer</td><td>${esc(p.engineer)}</td></tr>
+    <tr><td>Date</td><td>${esc(p.date)}</td></tr>
+    <tr><td>Status</td><td>${statusLabel}</td></tr>
+    ${p.notes?`<tr><td>Notes</td><td>${esc(p.notes)}</td></tr>`:''}
+    </table>
+    <div style="margin-top:20px;opacity:.5;font-size:10px">Generated by Insightech Alarms Configurator</div>
+  </div>
+  <div class="section">
+    <h2>Project Summary</h2>
+    <div class="stats-grid">
+      <div class="stat-box"><div class="stat-val">${entities.length}</div><div class="stat-lbl">Equipment Units</div></div>
+      <div class="stat-box"><div class="stat-val">${[...new Set(entities.map(([,e])=>e.eqName))].length}</div><div class="stat-lbl">Equipment Types</div></div>
+      <div class="stat-box"><div class="stat-val">${totalAlarms.toLocaleString()}</div><div class="stat-lbl">Active Alarms</div></div>
+      <div class="stat-box"><div class="stat-val">${(S.commonAlarms||[]).filter(a=>!a.deleted).length}</div><div class="stat-lbl">Common Alarms</div></div>
+    </div>
+    <h2>Equipment List</h2>
+    <table><thead><tr><th>Equipment</th><th>Category</th><th>Units</th><th>Active Alarms</th></tr></thead><tbody>
+    ${(() => {
+      const grouped = {};
+      entities.forEach(([,ev])=>{ if(!grouped[ev.eqName]) grouped[ev.eqName]={cat:ev.eqCat,count:0,alarms:0}; grouped[ev.eqName].count++; grouped[ev.eqName].alarms+=(ev.alarmGroups||[]).reduce((s,g)=>s+g.alarms.filter(a=>!a.deleted).length,0); });
+      return Object.entries(grouped).map(([name,{cat,count,alarms}])=>`<tr><td>${esc(name)}</td><td>${esc(cat)}</td><td style="text-align:center;font-weight:700">${count}</td><td style="text-align:center;color:#2d2d5e;font-weight:700">${alarms}</td></tr>`).join('');
+    })()}
+    </tbody></table>
+    <h2>Alarm List</h2>
+    <table><thead><tr><th>Entity</th><th>Equipment</th><th>Alarm Type</th><th>Tag</th><th>Description</th><th>Category</th><th>Priority</th></tr></thead><tbody>
+    ${entities.map(([ek,ev])=>`
+      <tr><td colspan="7" class="entity-header">📦 ${esc(ek)} — ${esc(ev.eqName)}</td></tr>
+      ${(ev.alarmGroups||[]).flatMap(g=>g.alarms.filter(a=>!a.deleted).map(a=>`<tr>
+        <td>${esc(ek)}</td><td>${esc(ev.eqName)}</td><td>${esc(g.alarmType)}</td>
+        <td style="font-family:monospace">${esc(a.name)}</td><td>${esc(a.desc)}</td><td>${esc(g.category)}</td>
+        <td style="text-align:center"><span class="badge ${a.priority===0?'p0':a.priority===5?'p5':'pn'}">${a.priority??'—'}</span></td>
+      </tr>`)).join('')}
+    `).join('')}
+    ${(S.commonAlarms||[]).filter(a=>!a.deleted).length?`
+      <tr><td colspan="7" class="entity-header">🌐 COMMON — Project-level Alarms</td></tr>
+      ${(S.commonAlarms||[]).filter(a=>!a.deleted).map(a=>`<tr>
+        <td>COMMON</td><td>Common</td><td>${esc(a.group)}</td>
+        <td style="font-family:monospace">${esc(a.name)}</td><td>${esc(a.desc)}</td><td>${esc(a.category)}</td>
+        <td style="text-align:center"><span class="badge ${a.priority===0?'p0':a.priority===5?'p5':'pn'}">${a.priority??'—'}</span></td>
+      </tr>`).join('')}`:''}
+    </tbody></table>
+  </div>
+  </body></html>`;
+
+  const blob = new Blob([html], {type:'text/html'});
+  const url = URL.createObjectURL(blob);
+  const win = window.open(url,'_blank');
+  setTimeout(()=>{ if(win) win.print(); URL.revokeObjectURL(url); }, 800);
+  toast('PDF report opened — use Print → Save as PDF ✓');
+}
+
+// ── Excel Client Export ──────────────────────────────────
+function exportExcelClient(){
+  if(typeof XLSX === 'undefined'){ toast('Excel library not loaded.','err'); return; }
+  const p = projInfo();
+  const entities = Object.entries(S.entityAlarms);
+  const wb = XLSX.utils.book_new();
+
+  // Cover sheet
+  const coverData = [
+    ['INSIGHTECH ALARMS CONFIGURATOR'],[''],
+    ['Project Name', p.name],
+    ['Project Reference', p.ref],
+    ['Client', p.client],
+    ['Site', p.site],
+    ['Engineer', p.engineer],
+    ['Date', p.date],
+    ['Status', {draft:'Draft',inprogress:'In Progress',completed:'Completed',delivered:'Delivered'}[S.projectStatus||'draft']||'Draft'],
+  ];
+  if(p.notes) coverData.push(['Notes', p.notes]);
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(coverData), 'Project Info');
+
+  // Summary sheet
+  const sumData = [['Equipment','Category','Units','Active Alarms']];
+  const grouped = {};
+  entities.forEach(([,ev])=>{ if(!grouped[ev.eqName]) grouped[ev.eqName]={cat:ev.eqCat,count:0,alarms:0}; grouped[ev.eqName].count++; grouped[ev.eqName].alarms+=(ev.alarmGroups||[]).reduce((s,g)=>s+g.alarms.filter(a=>!a.deleted).length,0); });
+  Object.entries(grouped).forEach(([name,{cat,count,alarms}])=>sumData.push([name,cat,count,alarms]));
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(sumData), 'Equipment Summary');
+
+  // Full alarm list sheet
+  const alarmData = [['Entity','Equipment','Category','Alarm Type','Tag','Description','Priority']];
+  entities.forEach(([ek,ev])=>{
+    (ev.alarmGroups||[]).forEach(g=>{
+      g.alarms.filter(a=>!a.deleted).forEach(a=>{
+        alarmData.push([ek, ev.eqName, g.category, g.alarmType, a.name, a.desc, a.priority??'']);
+      });
+    });
+  });
+  (S.commonAlarms||[]).filter(a=>!a.deleted).forEach(a=>{
+    alarmData.push(['COMMON','Common',a.category,a.group,a.name,a.desc,a.priority??'']);
+  });
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(alarmData), 'Alarm List');
+
+  // Per-equipment sheets (grouped by equipment type)
+  Object.entries(grouped).forEach(([name])=>{
+    const rows = [['Entity','Alarm Type','Tag','Description','Category','Priority']];
+    entities.filter(([,ev])=>ev.eqName===name).forEach(([ek,ev])=>{
+      (ev.alarmGroups||[]).forEach(g=>{
+        g.alarms.filter(a=>!a.deleted).forEach(a=>{
+          rows.push([ek, g.alarmType, a.name, a.desc, g.category, a.priority??'']);
+        });
+      });
+    });
+    const sheetName = name.substring(0,31).replace(/[\\\/\?\*\[\]]/g,'');
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(rows), sheetName);
+  });
+
+  XLSX.writeFile(wb, (p.ref||'Project')+' Alarm List Client.xlsx');
+  toast('Excel workbook exported ✓');
+}
+
+// ── Project Status ───────────────────────────────────────
+function setProjectStatus(status){
+  S.projectStatus = status;
+  const labels = {draft:'📝 Draft',inprogress:'⚙️ In Progress',completed:'✅ Completed',delivered:'📦 Delivered'};
+  document.getElementById('currentStatusLabel').textContent = labels[status]||status;
+  document.querySelectorAll('.status-btn').forEach(btn=>{
+    btn.classList.toggle('active', btn.dataset.status===status);
+  });
+}
+
+function renderExportStatus(){
+  const status = S.projectStatus||'draft';
+  setProjectStatus(status);
 }
 
 function projInfo(){
@@ -3018,6 +3341,7 @@ function buildProjectSnapshot(){
     version: 1,
     savedAt: new Date().toISOString(),
     savedBy: AUTH.username,
+    status: S.projectStatus || 'draft',
     info,
     selectedEq,
     quantities,
@@ -3131,77 +3455,123 @@ async function loadDashboard(){
     subtitle.textContent = `${totalProjects} project${totalProjects!==1?'s':''} found`;
 
     if(!groups.length){
+      document.getElementById('dashStats').innerHTML = '';
       content.innerHTML = `<div class="dash-empty"><div class="dash-empty-icon">📂</div><div style="font-size:14px;font-weight:600">No projects yet</div><div style="font-size:12px">Complete the wizard and click <strong>Save Project to GitHub</strong> on the Export page</div></div>`;
       return;
     }
 
-    content.innerHTML = '';
-    groups.forEach(group => {
-      const wrap = document.createElement('div');
-      wrap.style.marginBottom = '28px';
+    // Compute dashboard stats
+    const allProjects = groups.flatMap(g=>g.projects);
+    const totalAlarmCount = allProjects.reduce((s,{snap})=>{
+      return s + Object.values(snap.entityAlarms||{}).reduce((ss,e)=>ss+(e.alarmGroups||[]).reduce((sss,g)=>sss+g.alarms.filter(a=>!a.deleted).length,0),0);
+    },0);
+    const statusCounts = {draft:0,inprogress:0,completed:0,delivered:0};
+    allProjects.forEach(({snap})=>{ const st=snap.status||'draft'; if(statusCounts[st]!==undefined) statusCounts[st]++; });
 
-      // User label (only show for admin viewing multiple users)
-      if(isAdmin && groups.length > 1){
-        const initials = group.userName.split(' ').map(w=>w[0]||'').join('').slice(0,2).toUpperCase();
-        const label = document.createElement('div');
-        label.className = 'dash-user-label';
-        label.innerHTML = `<div class="dash-user-avatar">${initials}</div><div style="font-size:13px;font-weight:600">${esc(group.userName)}</div><div style="font-size:11px;color:var(--text3);margin-left:4px">${group.projects.length} project${group.projects.length!==1?'s':''}</div>`;
-        wrap.appendChild(label);
-      }
+    document.getElementById('dashStats').innerHTML = `
+      <div class="dash-stat-card"><div class="dash-stat-val">${totalProjects}</div><div class="dash-stat-lbl">Total Projects</div></div>
+      <div class="dash-stat-card"><div class="dash-stat-val" style="color:var(--green)">${totalAlarmCount.toLocaleString()}</div><div class="dash-stat-lbl">Total Alarms Configured</div></div>
+      <div class="dash-stat-card"><div class="dash-stat-val" style="color:var(--accent)">${statusCounts.inprogress}</div><div class="dash-stat-lbl">In Progress</div></div>
+      <div class="dash-stat-card"><div class="dash-stat-val" style="color:var(--purple)">${statusCounts.delivered}</div><div class="dash-stat-lbl">Delivered</div></div>
+    `;
 
-      const grid = document.createElement('div');
-      grid.className = 'proj-grid';
-
-      group.projects.forEach(({snap, sha, folderName, userName}) => {
-        const info = snap.info || {};
-        const eqCount = (snap.selectedEq||[]).length;
-        const date = info.projectDate || snap.savedAt?.split('T')[0] || '—';
-        const savedAt = snap.savedAt ? new Date(snap.savedAt).toLocaleString() : '—';
-
-        const card = document.createElement('div');
-        card.className = 'proj-card';
-        // Store snap as data attribute to avoid onclick escaping issues
-        card.dataset.snap = JSON.stringify(snap);
-        card.innerHTML = `
-          <div class="proj-card-header">
-            <div style="flex:1;min-width:0">
-              <div class="proj-ref">${esc(info.projectRef||folderName)}</div>
-              <div class="proj-name">${esc(info.projectName||'Untitled Project')}</div>
-              <div class="proj-client">${esc(info.clientName||'—')}</div>
-            </div>
-          </div>
-          <div class="proj-card-body">
-            <div class="proj-meta">📍 ${esc(info.projectSite||'—')}</div>
-            <div class="proj-meta">👤 ${esc(info.engineerName||userName)}</div>
-            <div class="proj-meta">💾 Last saved: ${esc(savedAt)}</div>
-          </div>
-          <div class="proj-card-footer">
-            <span class="proj-stat">${eqCount} equipment type${eqCount!==1?'s':''}</span>
-            <div style="margin-left:auto;display:flex;gap:6px">
-              <button class="btn btn-primary btn-sm" id="open-${esc(folderName)}">▶ Open</button>
-              <button class="btn btn-outline btn-sm" style="color:var(--red);border-color:var(--red)" id="del-${esc(folderName)}">🗑</button>
-            </div>
-          </div>`;
-
-        // Attach events after insertion to avoid any escaping issues
-        card.querySelector(`#open-${esc(folderName)}`).addEventListener('click', ()=>{
-          openProject(card.dataset.snap);
-        });
-        card.querySelector(`#del-${esc(folderName)}`).addEventListener('click', (e)=>{
-          e.stopPropagation();
-          deleteProject(userName, folderName);
-        });
-        grid.appendChild(card);
-      });
-
-      wrap.appendChild(grid);
-      content.appendChild(wrap);
-    });
+    // Store all groups for filtering
+    window._dashGroups = groups;
+    renderDashCards(groups);
 
   } catch(e){
     content.innerHTML = `<div class="dash-empty"><div class="dash-empty-icon">⚠️</div><div style="font-size:14px;font-weight:600">Failed to load projects</div><div style="font-size:12px;color:var(--red)">${esc(e.message)}</div></div>`;
     subtitle.textContent = 'Error loading';
   }
+}
+
+function filterDashboard(){
+  if(!window._dashGroups) return;
+  const q = (document.getElementById('dashSearch').value||'').toLowerCase();
+  const st = document.getElementById('dashStatusFilter').value;
+  const filtered = window._dashGroups.map(group=>({
+    ...group,
+    projects: group.projects.filter(({snap})=>{
+      const info = snap.info||{};
+      const matchQ = !q || [info.projectName,info.projectRef,info.clientName,info.projectSite,info.engineerName].some(v=>(v||'').toLowerCase().includes(q));
+      const matchSt = !st || (snap.status||'draft')===st;
+      return matchQ && matchSt;
+    })
+  })).filter(g=>g.projects.length);
+  renderDashCards(filtered);
+}
+
+function renderDashCards(groups){
+  const content = document.getElementById('dashContent');
+  const isAdmin = AUTH.role === 'admin';
+  content.innerHTML = '';
+
+  if(!groups.length){
+    content.innerHTML = `<div class="dash-empty"><div class="dash-empty-icon">🔍</div><div style="font-size:14px;font-weight:600">No projects match your search</div></div>`;
+    return;
+  }
+
+  const statusMap = {draft:{cls:'status-draft',label:'Draft'},inprogress:{cls:'status-inprogress',label:'In Progress'},completed:{cls:'status-completed',label:'Completed'},delivered:{cls:'status-delivered',label:'Delivered'}};
+
+  groups.forEach(group => {
+    const wrap = document.createElement('div');
+    wrap.style.marginBottom = '28px';
+
+    if(isAdmin && groups.length > 1){
+      const initials = group.userName.split(' ').map(w=>w[0]||'').join('').slice(0,2).toUpperCase();
+      const label = document.createElement('div');
+      label.className = 'dash-user-label';
+      label.innerHTML = `<div class="dash-user-avatar">${initials}</div><div style="font-size:13px;font-weight:600">${esc(group.userName)}</div><div style="font-size:11px;color:var(--text3);margin-left:4px">${group.projects.length} project${group.projects.length!==1?'s':''}</div>`;
+      wrap.appendChild(label);
+    }
+
+    const grid = document.createElement('div');
+    grid.className = 'proj-grid';
+
+    group.projects.forEach(({snap, folderName, userName}) => {
+      const info = snap.info || {};
+      const eqCount = (snap.selectedEq||[]).length;
+      const savedAt = snap.savedAt ? new Date(snap.savedAt).toLocaleString() : '—';
+      const status = snap.status || 'draft';
+      const {cls, label} = statusMap[status] || statusMap.draft;
+
+      const card = document.createElement('div');
+      card.className = 'proj-card';
+      card.dataset.snap = JSON.stringify(snap);
+      card.innerHTML = `
+        <div class="proj-card-header">
+          <div style="flex:1;min-width:0">
+            <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px">
+              <div class="proj-ref" style="margin-bottom:0">${esc(info.projectRef||folderName)}</div>
+              <span class="status-badge ${cls}">${label}</span>
+            </div>
+            <div class="proj-name">${esc(info.projectName||'Untitled Project')}</div>
+            <div class="proj-client">${esc(info.clientName||'—')}</div>
+          </div>
+        </div>
+        <div class="proj-card-body">
+          <div class="proj-meta">📍 ${esc(info.projectSite||'—')}</div>
+          <div class="proj-meta">👤 ${esc(info.engineerName||userName)}</div>
+          <div class="proj-meta">💾 ${esc(savedAt)}</div>
+        </div>
+        <div class="proj-card-footer">
+          <span class="proj-stat">${eqCount} eq. type${eqCount!==1?'s':''}</span>
+          <div style="margin-left:auto;display:flex;gap:6px">
+            <button class="btn btn-primary btn-sm" id="open-${esc(folderName)}">▶ Open</button>
+            <button class="btn btn-outline btn-sm" id="dup-${esc(folderName)}" title="Duplicate">⧉</button>
+            <button class="btn btn-outline btn-sm" style="color:var(--red);border-color:var(--red)" id="del-${esc(folderName)}">🗑</button>
+          </div>
+        </div>`;
+
+      card.querySelector(`#open-${esc(folderName)}`).addEventListener('click', ()=>{ openProject(card.dataset.snap); });
+      card.querySelector(`#dup-${esc(folderName)}`).addEventListener('click', (e)=>{ e.stopPropagation(); duplicateProject(card.dataset.snap, userName); });
+      card.querySelector(`#del-${esc(folderName)}`).addEventListener('click', (e)=>{ e.stopPropagation(); deleteProject(userName, folderName); });
+      grid.appendChild(card);
+    });
+
+    wrap.appendChild(grid);
+    content.appendChild(wrap);
+  });
 }
 
 function openProject(snapJson){
@@ -3239,6 +3609,7 @@ function openProject(snapJson){
     S.commonAlarms    = Array.isArray(snap.commonAlarms)    ? snap.commonAlarms    : [];
     S.customEquipment = Array.isArray(snap.customEquipment) ? snap.customEquipment : [];
     S.activeEntity    = null;
+    S.projectStatus   = snap.status || 'draft';
 
     // Unlock all steps
     S.unlocked = new Set(['project','equipment','configure','export']);
@@ -3277,6 +3648,34 @@ async function deleteProject(userName, folderName){
   }
 }
 
+async function duplicateProject(snapJson, userName){
+  try {
+    const snap = typeof snapJson === 'string' ? JSON.parse(snapJson) : snapJson;
+    const origRef = snap.info?.projectRef || 'Project';
+    const newRef = prompt(`Duplicate project — enter a new Project Reference:`, origRef + ' (Copy)');
+    if(!newRef || !newRef.trim()) return;
+
+    const newSnap = JSON.parse(JSON.stringify(snap)); // deep clone
+    newSnap.info.projectRef = newRef.trim();
+    newSnap.info.projectName = (newSnap.info.projectName||'') + ' (Copy)';
+    newSnap.savedAt = new Date().toISOString();
+    newSnap.savedBy = AUTH.username;
+    newSnap.status = 'draft';
+
+    const pathObj = getProjectPath(AUTH.firstName, AUTH.lastName, newRef.trim());
+    const jsonStr = JSON.stringify(newSnap, null, 2);
+
+    await githubRequest('PUT', pathObj.apiPath, {
+      message: `Duplicate project: ${newRef.trim()} by ${AUTH.username}`,
+      rawContent: jsonStr
+    });
+    toast(`Project duplicated as "${newRef.trim()}" ✓`);
+    loadDashboard();
+  } catch(e){
+    toast('Duplicate failed: ' + e.message, 'err');
+  }
+}
+
 function resetWizard(){
   // Reset state for a new project without clearing alarm DB
   S.selectedEq    = new Set();
@@ -3286,6 +3685,7 @@ function resetWizard(){
   S.activeEntity  = null;
   S.projectDone   = false;
   S.eqDone        = false;
+  S.projectStatus = 'draft';
   S.unlocked      = new Set(['project']);
   updateTabs();
   renderEquipment();
