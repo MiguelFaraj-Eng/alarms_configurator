@@ -1,5 +1,13 @@
 [
   {
+    "timestamp": "2026-06-19T14:30:40.872Z",
+    "user": "Miguel",
+    "name": "Miguel Faraj",
+    "role": "admin",
+    "type": "project_save",
+    "message": "Saved project \"test\" (test) v1 — status: draft"
+  },
+  {
     "timestamp": "2026-06-19T14:26:10.721Z",
     "user": "Miguel",
     "name": "Miguel Faraj",
