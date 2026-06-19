@@ -1,0 +1,78 @@
+{
+  "version": 1,
+  "savedAt": "2026-06-19T14:30:37.761Z",
+  "savedBy": "Miguel",
+  "status": "draft",
+  "info": {
+    "projectName": "test",
+    "projectRef": "test",
+    "clientName": "teste",
+    "projectSite": "tests",
+    "projectNotes": "tt",
+    "engineerName": "Miguel Faraj",
+    "engineerId": "Miguel",
+    "projectDate": "2026-06-19"
+  },
+  "selectedEq": [
+    "Packers|Drop type Packer",
+    "Packers|Tray & Crate Packer (2 in 1)",
+    "Plastic & Steel Rack Handling|Robotic Rack Unloader",
+    "Conveying Systems|Modular Plastic Belt Conveyor",
+    "Conveying Systems|Roller Conveyor"
+  ],
+  "quantities": {
+    "Packers|Drop type Packer": 2,
+    "Packers|Tray & Crate Packer (2 in 1)": 1,
+    "Plastic & Steel Rack Handling|Robotic Rack Unloader": 1,
+    "Conveying Systems|Modular Plastic Belt Conveyor": 1,
+    "Conveying Systems|Roller Conveyor": 1
+  },
+  "entityAlarms": {
+    "E01": {
+      "eqName": "Drop type Packer",
+      "eqCat": "Packers",
+      "idx": 1,
+      "total": 2,
+      "alarmGroups": []
+    },
+    "E02": {
+      "eqName": "Drop type Packer",
+      "eqCat": "Packers",
+      "idx": 2,
+      "total": 2,
+      "alarmGroups": []
+    },
+    "E03": {
+      "eqName": "Tray & Crate Packer (2 in 1)",
+      "eqCat": "Packers",
+      "idx": 1,
+      "total": 1,
+      "alarmGroups": []
+    },
+    "E04": {
+      "eqName": "Robotic Rack Unloader",
+      "eqCat": "Plastic & Steel Rack Handling",
+      "idx": 1,
+      "total": 1,
+      "alarmGroups": []
+    },
+    "E05": {
+      "eqName": "Modular Plastic Belt Conveyor",
+      "eqCat": "Conveying Systems",
+      "idx": 1,
+      "total": 1,
+      "alarmGroups": []
+    },
+    "E06": {
+      "eqName": "Roller Conveyor",
+      "eqCat": "Conveying Systems",
+      "idx": 1,
+      "total": 1,
+      "alarmGroups": []
+    }
+  },
+  "commonAlarms": [],
+  "customEquipment": [],
+  "customProjectAlarms": [],
+  "versionNum": 1
+}
