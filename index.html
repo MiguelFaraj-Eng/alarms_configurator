@@ -2762,43 +2762,73 @@ async function loadAlarmDBFromGitHub(){
   // Only fetch if no local DB is already loaded
   if(Object.keys(S.importedSheets).length > 0) return;
   try {
-    const url = REPO_BASE + 'data/alarms_template.xlsx';
-    const res = await fetch(url);
-    if(!res.ok){ console.warn('Alarm template not found on GitHub:', res.status); return; }
-    const buf = await res.arrayBuffer();
-    const wb = XLSX.read(buf, {type:'array'});
-    const sheets = {};
-    wb.SheetNames.forEach(name=>{
-      const ws = wb.Sheets[name];
-      const raw = XLSX.utils.sheet_to_json(ws, {header:1, defval:''});
-      const alarms = [];
-      let group = '';
-      raw.forEach(row=>{
-        const tag = String(row[0]||'').trim();
-        const desc = String(row[1]||'').trim();
-        if(!tag) return;
-        if(!desc){ group = tag; return; }
-        const cat = String(row[2]||'').trim();
-        const id = row[3] ? parseInt(row[3]) : null;
-        const prio = row[4] !== '' && row[4] !== null && row[4] !== undefined ? parseInt(row[4]) : null;
-        alarms.push({group, tag, description:desc, category:cat, id, priority:prio, sheet:name});
-      });
-      sheets[name] = alarms;
-    });
-    S.importedSheets = sheets;
-    S.importedFile = 'alarms_template.xlsx (GitHub)';
+    // 1. List all .xlsx files in data/Alarms/
+    const listRes = await fetch('https://api.github.com/repos/MiguelFaraj-Eng/alarms_configurator/contents/data/Alarms');
+    if(!listRes.ok) throw new Error('Could not list data/Alarms folder: ' + listRes.status);
+    const files = await listRes.json();
+    const xlsxFiles = files.filter(f => f.type === 'file' && f.name.toLowerCase().endsWith('.xlsx'));
+    if(!xlsxFiles.length) throw new Error('No Excel files found in data/Alarms/');
+
+    // 2. Fetch and parse each file, merging all sheets into one database
+    const merged = {};
+    const fileNames = [];
+    for(const file of xlsxFiles){
+      try {
+        const res = await fetch(file.download_url);
+        if(!res.ok){ console.warn('Could not fetch', file.name, res.status); continue; }
+        const buf = await res.arrayBuffer();
+        const wb = XLSX.read(buf, {type:'array'});
+        wb.SheetNames.forEach(sheetName => {
+          const ws = wb.Sheets[sheetName];
+          const raw = XLSX.utils.sheet_to_json(ws, {header:1, defval:''});
+          const alarms = [];
+          let group = '';
+          raw.forEach(row => {
+            const tag = String(row[0]||'').trim();
+            const desc = String(row[1]||'').trim();
+            if(!tag) return;
+            if(!desc){ group = tag; return; }
+            const cat = String(row[2]||'').trim();
+            const id = row[3] ? parseInt(row[3]) : null;
+            const prio = row[4] !== '' && row[4] !== null && row[4] !== undefined ? parseInt(row[4]) : null;
+            alarms.push({group, tag, description:desc, category:cat, id, priority:prio, sheet:sheetName});
+          });
+          // If the sheet name already exists from another file, append the alarms
+          if(merged[sheetName]){
+            merged[sheetName].push(...alarms);
+          } else {
+            merged[sheetName] = alarms;
+          }
+        });
+        fileNames.push(file.name);
+        console.log('Loaded:', file.name);
+      } catch(fileErr){
+        console.warn('Error loading', file.name, fileErr);
+      }
+    }
+
+    if(!fileNames.length) throw new Error('No files could be loaded from data/Alarms/');
+
+    // 3. Store merged database
+    S.importedSheets = merged;
+    S.importedFile = fileNames.join(', ');
     rebuildTemplates(S.importedSheets);
-    const total = Object.values(sheets).reduce((a,b)=>a+b.length,0);
+
+    const total = Object.values(merged).reduce((a,b) => a+b.length, 0);
+
     const el = document.getElementById('importStatusLine');
-    if(el) el.textContent = `✓ alarms_template.xlsx — ${total.toLocaleString()} alarms (loaded from GitHub)`;
+    if(el) el.textContent = `✓ ${fileNames.length} file${fileNames.length>1?'s':''} from data/Alarms/ — ${total.toLocaleString()} alarms loaded`;
+
     const sf = document.getElementById('settingsSheetFilter');
-    if(sf) sf.innerHTML = '<option value="">All Sheets</option>' + Object.keys(sheets).map(n=>`<option>${esc(n)}</option>`).join('');
+    if(sf) sf.innerHTML = '<option value="">All Sheets</option>' + Object.keys(merged).map(n=>`<option>${esc(n)}</option>`).join('');
+
     updateStats();
-    toast('Alarm database loaded from GitHub ✓', 'info');
     renderSettingsTable();
-    console.log('GitHub alarm DB loaded:', total, 'alarms');
+    toast(`Alarm database ready — ${total.toLocaleString()} alarms from ${fileNames.length} file${fileNames.length>1?'s':''} ✓`, 'info');
+    console.log('data/Alarms/ loaded:', fileNames, '| total alarms:', total);
+
   } catch(e) {
-    console.warn('Could not load alarm DB from GitHub:', e);
+    console.warn('Could not load alarm DB from data/Alarms/:', e);
   }
 }
 
