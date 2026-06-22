@@ -1,5 +1,13 @@
 [
   {
+    "timestamp": "2026-06-22T12:23:25.917Z",
+    "user": "Miguel",
+    "name": "Miguel Faraj",
+    "role": "admin",
+    "type": "login",
+    "message": "Miguel Faraj logged in"
+  },
+  {
     "timestamp": "2026-06-22T06:26:25.798Z",
     "user": "Miguel",
     "name": "Miguel Faraj",
@@ -13,7 +21,7 @@
     "name": "Miguel Faraj",
     "role": "admin",
     "type": "project_save",
-    "message": "Saved project \"test\" (test) v1 â status: draft"
+    "message": "Saved project \"test\" (test) v1 Ã¢ÂÂ status: draft"
   },
   {
     "timestamp": "2026-06-19T14:26:10.721Z",
