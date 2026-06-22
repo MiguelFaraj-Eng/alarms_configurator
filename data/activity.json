@@ -1,5 +1,13 @@
 [
   {
+    "timestamp": "2026-06-22T12:40:34.884Z",
+    "user": "Miguel",
+    "name": "Miguel Faraj",
+    "role": "admin",
+    "type": "project_open",
+    "message": "Opened project \"test\" (test) by Miguel Faraj"
+  },
+  {
     "timestamp": "2026-06-22T12:40:33.247Z",
     "user": "Miguel",
     "name": "Miguel Faraj",
@@ -53,7 +61,7 @@
     "name": "Miguel Faraj",
     "role": "admin",
     "type": "project_save",
-    "message": "Saved project \"test\" (test) v1 ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ status: draft"
+    "message": "Saved project \"test\" (test) v1 ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ status: draft"
   },
   {
     "timestamp": "2026-06-19T14:26:10.721Z",
