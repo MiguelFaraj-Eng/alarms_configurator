@@ -1,5 +1,13 @@
 [
   {
+    "timestamp": "2026-06-22T13:35:03.117Z",
+    "user": "Miguel",
+    "name": "Miguel Faraj",
+    "role": "admin",
+    "type": "project_open",
+    "message": "Opened project \"test\" (test) by Miguel Faraj"
+  },
+  {
     "timestamp": "2026-06-22T13:34:57.438Z",
     "user": "Miguel",
     "name": "Miguel Faraj",
