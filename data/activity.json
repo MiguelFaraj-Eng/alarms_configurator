@@ -1,5 +1,13 @@
 [
   {
+    "timestamp": "2026-06-22T13:34:57.438Z",
+    "user": "Miguel",
+    "name": "Miguel Faraj",
+    "role": "admin",
+    "type": "login",
+    "message": "Miguel Faraj logged in"
+  },
+  {
     "timestamp": "2026-06-22T13:33:29.989Z",
     "user": "Miguel",
     "name": "Miguel Faraj",
