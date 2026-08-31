@@ -250,6 +250,35 @@ html.light .t-thumb{transform:translateX(16px);}
 .qty-num{width:48px;text-align:center;font-family:'DM Mono',monospace;font-size:14px;font-weight:500;padding:4px;border-top:1.5px solid var(--border);border-bottom:1.5px solid var(--border);border-left:none;border-right:none;background:var(--surface);color:var(--text);}
 .alarm-count-badge{display:inline-flex;align-items:center;gap:5px;padding:2px 8px;border-radius:20px;font-family:'DM Mono',monospace;font-size:10px;font-weight:500;}
 
+/* ── CATALOG (Configure sidebar) ─────────────────────────── */
+.cat-accordion{margin-bottom:6px;}
+.cat-accordion-head{display:flex;align-items:center;gap:6px;cursor:pointer;padding:8px 2px;user-select:none;transition:color .15s;}
+.cat-accordion-head:hover{color:var(--accent);}
+.cat-accordion-arrow{font-size:9px;color:var(--text3);transition:transform .18s;flex-shrink:0;}
+.cat-accordion.open .cat-accordion-arrow{transform:rotate(90deg);}
+.cat-accordion-title{font-family:'DM Mono',monospace;font-size:9px;letter-spacing:2px;text-transform:uppercase;color:var(--text3);flex:1;}
+.cat-accordion-head:hover .cat-accordion-title{color:var(--accent);}
+.cat-count-badge{font-size:9.5px;color:var(--accent);background:var(--accent-light);padding:2px 7px;border-radius:20px;font-family:'DM Mono',monospace;font-weight:600;min-width:14px;text-align:center;}
+.cat-accordion-body{overflow:hidden;max-height:0;transition:max-height .2s ease;}
+.cat-accordion.open .cat-accordion-body{max-height:4000px;}
+
+.eq-card{background:var(--surface);border:1.5px solid var(--border);border-radius:9px;padding:9px 10px;margin:0 0 6px;transition:border-color .15s,background .15s;}
+.eq-card.included{border-color:var(--accent);background:var(--accent-light);}
+.eq-card-head{display:flex;align-items:center;justify-content:space-between;gap:8px;}
+.eq-card-name{font-size:12px;font-weight:500;cursor:pointer;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.eq-card-name.active{color:var(--accent);font-weight:600;}
+.eq-stepper{display:flex;align-items:center;gap:0;flex-shrink:0;}
+.eq-stepper button{width:20px;height:20px;border-radius:5px;border:1.5px solid var(--border);background:var(--surface2);color:var(--text2);font-size:13px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .15s;line-height:1;}
+.eq-stepper button:hover{border-color:var(--accent);color:var(--accent);}
+.eq-stepper input{width:30px;text-align:center;font-family:'DM Mono',monospace;font-size:12px;font-weight:600;padding:2px;border-top:1.5px solid var(--border);border-bottom:1.5px solid var(--border);border-left:none;border-right:none;background:var(--surface);color:var(--text);}
+.eq-placement{display:flex;align-items:center;gap:12px;margin-top:8px;padding-top:8px;border-top:1px dashed var(--border);}
+.eq-placement-field{display:flex;align-items:center;gap:6px;}
+.eq-placement-field span{font-size:9px;letter-spacing:.5px;color:var(--text3);text-transform:uppercase;font-family:'DM Mono',monospace;}
+.eq-placement-field input{width:38px;padding:3px 4px;border-radius:5px;border:1.5px solid var(--border);background:var(--surface2);color:var(--text);font-family:'DM Mono',monospace;font-size:11.5px;text-align:center;}
+.eq-placement-field input:focus{border-color:var(--accent);outline:none;}
+.eq-card-chip{margin-left:auto;font-size:9.5px;}
+.eq-empty-hint{font-size:10.5px;color:var(--text3);padding:2px 0 0;font-style:italic;}
+
 /* ── SUMMARY + EXPORT PAGE ───────────────────────────────── */
 .sum-page{padding:28px;max-width:900px;margin:0 auto;width:100%;}
 .sum-stat-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px;margin-bottom:20px;}
@@ -1634,45 +1663,65 @@ function renderQtyPanel(){
     cont.innerHTML = '<div style="font-size:11px;color:var(--text3);padding:8px 0">Loading alarm database…</div>';
     return;
   }
-  cont.innerHTML = EQ_CATS.map(c=>`
-    <div style="margin-bottom:14px">
-      <div style="font-family:'DM Mono',monospace;font-size:9px;letter-spacing:2px;text-transform:uppercase;color:var(--text3);padding:5px 0 6px;border-bottom:1px solid var(--border);margin-bottom:6px">${esc(c.cat)}</div>
-      ${c.items.map(name=>{
-        const key = c.cat+'|'+name;
-        const equip = CATALOG[c.cat][name];
-        const cfg = getQtyCfg(key, c.cat, name);
-        const entity = S.entityAlarms[key];
-        const active = S.activeEntity===key;
-        const lineCtl = equip.hasLines ? `
-            <div style="display:flex;flex-direction:column;gap:1px">
-              <span style="font-size:8px;color:var(--text3);letter-spacing:.5px">LINE</span>
-              <input class="qty-num" style="width:44px" type="number" min="${equip.lineRange[0]}" max="${equip.lineRange[1]}" value="${cfg.line}" oninput="changeQtyField('${esc2(key)}','line',this.value)">
-            </div>
-            <div style="display:flex;flex-direction:column;gap:1px">
-              <span style="font-size:8px;color:var(--text3);letter-spacing:.5px">START</span>
-              <input class="qty-num" style="width:44px" type="number" min="${equip.instanceRange[0]}" max="${equip.instanceRange[1]}" value="${cfg.start}" oninput="changeQtyField('${esc2(key)}','start',this.value)">
+  // Lazily init collapsed-state: collapse categories with nothing configured yet,
+  // keep categories that already have quantities set open.
+  if(!S.collapsedCats){
+    S.collapsedCats = new Set();
+    EQ_CATS.forEach(c=>{
+      const hasAny = c.items.some(name=> (S.entityAlarms[c.cat+'|'+name]) );
+      if(!hasAny) S.collapsedCats.add(c.cat);
+    });
+  }
+
+  cont.innerHTML = EQ_CATS.map(c=>{
+    const configuredCount = c.items.filter(name=>S.entityAlarms[c.cat+'|'+name]).length;
+    const open = !S.collapsedCats.has(c.cat);
+    return `<div class="cat-accordion ${open?'open':''}">
+      <div class="cat-accordion-head" onclick="toggleCatAccordion('${esc2(c.cat)}')">
+        <span class="cat-accordion-arrow">▶</span>
+        <span class="cat-accordion-title">${esc(c.cat)}</span>
+        ${configuredCount ? `<span class="cat-count-badge">${configuredCount}</span>` : ''}
+      </div>
+      <div class="cat-accordion-body">
+        ${c.items.map(name=>{
+          const key = c.cat+'|'+name;
+          const equip = CATALOG[c.cat][name];
+          const cfg = getQtyCfg(key, c.cat, name);
+          const entity = S.entityAlarms[key];
+          const active = S.activeEntity===key;
+          const showPlacement = equip.hasLines && cfg.qty>0;
+          const placement = showPlacement ? `
+            <div class="eq-placement">
+              <div class="eq-placement-field"><span>Line</span><input type="number" min="${equip.lineRange[0]}" max="${equip.lineRange[1]}" value="${cfg.line}" oninput="changeQtyField('${esc2(key)}','line',this.value)"></div>
+              <div class="eq-placement-field"><span>Start</span><input type="number" min="${equip.instanceRange[0]}" max="${equip.instanceRange[1]}" value="${cfg.start}" oninput="changeQtyField('${esc2(key)}','start',this.value)"></div>
             </div>` : '';
-        return `<div style="margin-bottom:8px">
-          <div style="font-size:12px;font-weight:500;margin-bottom:4px;cursor:pointer;${active?'color:var(--accent)':''}" onclick="${entity?`selectEntity('${esc2(key)}')`:''}">${esc(name)}</div>
-          <div style="display:flex;align-items:flex-end;gap:6px;margin-bottom:5px">
-            <div style="display:flex;flex-direction:column;gap:1px">
-              <span style="font-size:8px;color:var(--text3);letter-spacing:.5px">QTY</span>
-              <div style="display:flex;align-items:center">
-                <button class="qty-minus" onclick="changeQtyField('${esc2(key)}','qty',${cfg.qty-1})">−</button>
-                <input class="qty-num" type="number" min="0" max="99" value="${cfg.qty}" oninput="changeQtyField('${esc2(key)}','qty',this.value)">
-                <button class="qty-plus" onclick="changeQtyField('${esc2(key)}','qty',${cfg.qty+1})">+</button>
+          const chip = entity ? (()=>{
+            const totalA = entity.alarmGroups.reduce((s,g)=>s+g.alarms.length,0);
+            const activeA = entity.alarmGroups.reduce((s,g)=>s+g.alarms.filter(a=>!a.deleted).length,0);
+            return `<span class="chip eq-card-chip ${active?'active':''}" onclick="selectEntity('${esc2(key)}')">${activeA}/${totalA}</span>`;
+          })() : '';
+          return `<div class="eq-card ${cfg.qty>0?'included':''}">
+            <div class="eq-card-head">
+              <span class="eq-card-name ${active?'active':''}" title="${esc(name)}" onclick="${entity?`selectEntity('${esc2(key)}')`:''}">${esc(name)}</span>
+              <div class="eq-stepper">
+                <button onclick="changeQtyField('${esc2(key)}','qty',${cfg.qty-1})">−</button>
+                <input type="number" min="0" max="99" value="${cfg.qty}" oninput="changeQtyField('${esc2(key)}','qty',this.value)">
+                <button onclick="changeQtyField('${esc2(key)}','qty',${cfg.qty+1})">+</button>
               </div>
+              ${chip}
             </div>
-            ${lineCtl}
-            ${entity ? (()=>{
-              const totalA = entity.alarmGroups.reduce((s,g)=>s+g.alarms.length,0);
-              const activeA = entity.alarmGroups.reduce((s,g)=>s+g.alarms.filter(a=>!a.deleted).length,0);
-              return `<span class="chip ${active?'active':''}" style="cursor:pointer" onclick="selectEntity('${esc2(key)}')">${activeA}/${totalA}</span>`;
-            })() : ''}
-          </div>
-        </div>`;
-      }).join('')}
-    </div>`).join('');
+            ${placement}
+          </div>`;
+        }).join('')}
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function toggleCatAccordion(cat){
+  if(S.collapsedCats.has(cat)) S.collapsedCats.delete(cat);
+  else S.collapsedCats.add(cat);
+  renderQtyPanel();
 }
 
 function changeQtyField(key, field, val){
@@ -3859,6 +3908,7 @@ function openProject(snapJson){
     S.customEquipment = Array.isArray(snap.customEquipment) ? snap.customEquipment : [];
     S.customProjectAlarms = Array.isArray(snap.customProjectAlarms) ? snap.customProjectAlarms : [];
     S.activeEntity    = null;
+    S.collapsedCats   = null;
     S.projectStatus   = snap.status || 'draft';
 
     // Unlock all steps
@@ -4150,6 +4200,7 @@ function resetWizard(){
   S.commonAlarms  = [];
   S.customProjectAlarms = [];
   S.activeEntity  = null;
+  S.collapsedCats = null;
   S.projectDone   = false;
   S.eqDone        = false;
   S.projectStatus = 'draft';
