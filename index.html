@@ -465,9 +465,8 @@ html.light .login-logo{filter:none;}
   <div class="h-steps">
     <div class="h-step" id="tab-dashboard" onclick="tryNav('dashboard')"><div class="step-n">🏠</div>Dashboard</div>
     <div class="h-step active" id="tab-project" onclick="tryNav('project')"><div class="step-n">1</div>Project</div>
-    <div class="h-step locked" id="tab-equipment" onclick="tryNav('equipment')"><div class="step-n">2</div>Equipment</div>
-    <div class="h-step locked" id="tab-configure" onclick="tryNav('configure')"><div class="step-n">3</div>Configure</div>
-    <div class="h-step locked" id="tab-export" onclick="tryNav('export')"><div class="step-n">4</div>Export</div>
+    <div class="h-step locked" id="tab-configure" onclick="tryNav('configure')"><div class="step-n">2</div>Configure</div>
+    <div class="h-step locked" id="tab-export" onclick="tryNav('export')"><div class="step-n">3</div>Export</div>
     <div class="h-step" id="tab-settings" onclick="trySettings()"><div class="step-n">⚙</div>Settings</div>
     <div class="h-step" id="tab-users" onclick="tryUsers()" style="display:none"><div class="step-n">👥</div>Users</div>
   </div>
@@ -588,21 +587,6 @@ html.light .login-logo{filter:none;}
     </div>
   </div>
 
-  <!-- PAGE: EQUIPMENT -->
-  <div class="page" id="page-equipment">
-    <div class="eq-page">
-      <div class="step-title" style="display:flex;align-items:flex-start;gap:16px;margin-bottom:24px">
-        <div class="big-num">02</div>
-        <div><div class="step-h">Equipment Selection</div><div class="step-p">Select all equipment for this project — multiple allowed</div></div>
-      </div>
-      <div id="equipmentGrid"></div>
-      <div class="actions">
-        <button class="btn btn-outline" onclick="goPage('project')">← Back</button>
-        <button class="btn btn-primary" onclick="goEquipment()">Next: Set Quantities →</button>
-      </div>
-    </div>
-  </div>
-
   <!-- PAGE: CONFIGURE (Quantities + Alarm config) -->
   <div class="page" id="page-configure">
     <div style="display:flex;height:100%;overflow:hidden;">
@@ -651,7 +635,7 @@ html.light .login-logo{filter:none;}
   <div class="page" id="page-export">
     <div class="sum-page">
       <div class="step-title" style="display:flex;align-items:flex-start;gap:16px;margin-bottom:24px">
-        <div class="big-num">04</div>
+        <div class="big-num">03</div>
         <div><div class="step-h">Summary & Export</div><div class="step-p">Review your configuration and export in your preferred format</div></div>
       </div>
       <div class="sum-stat-row" id="sumStats"></div>
@@ -1152,44 +1136,9 @@ const S = {
 // ══════════════════════════════════════════════════
 //  EQUIPMENT CATEGORIES
 // ══════════════════════════════════════════════════
-const EQ_CATS = [
-  {cat:"Packers",items:["Drop type Packer","2-Axis Delta Robot Packer","Pick & Place Gantry Packer","3-Axis Delta Robot Packer","Tray & Crate Packer (2 in 1)","Top Loading RSC Packer (3 in 1)"]},
-  {cat:"Palletizers",items:["Semi Automatic Palletizer","Robotic Crate Palletizer","Pantograph Palletizer","Hybrid Palletizer","Robotic Palletizer"]},
-  {cat:"Depalletizers",items:["Robotic Crate Depalletizer","Pantograph Depalletizer","Sweep Type Depalletizer","Robotic Depalletizer"]},
-  {cat:"Inspection Systems",items:["Crate Inspection","Wooden Pallet Inspection","Plastic Pallet Inspection","Full Bottle Inspection","Empty Bottle Inspection"]},
-  {cat:"Accumulation Systems",items:["Accumulation Turntable","FIFO Accumulation Table","Mass Flow Accumulation Table","Row Accumulation Table","Loop Accumulation"]},
-  {cat:"Primary & Secondary Manipulation",items:["Continuous Turning Device","Starwheel Divider","Continuous Pusher","Segregation Unit For Cartons","Step Divider - Merge For Primary"]},
-  {cat:"Empty Bottle Handling",items:["Debagger for square-oval Bottles","Invert Cleaner","Debagger for round bottles"]},
-  {cat:"Crate Handling",items:["MDR Conveying","Motorized Crate Chute","Crate Merging Table","Crate Diverter","Crate Orientor","Side grip crate elevator - lowerator"]},
-  {cat:"Pallet Handling",items:["Pallet Elevator - lowerator","Pallet turntable","Transfer Car","Pallet 90 Degrees Transfer Unit"]},
-  {cat:"Plastic & Steel Rack Handling",items:["Robotic Rack Unloader","Rack Washer","Robotic Rack Loader"]},
-  {cat:"Conveying Systems",items:["Modular Plastic Belt Conveyor","Belt Conveyor","Modular Chain Conveyors","Plastic Chain Conveyor for crate","Roller Conveyor","Roller - Chain Conveyor for Pallet","Roller Conveyor for Pallet","Modular Chain Conveyor for Pallet"]}
-];
-
-// Maps equipment name to Excel sheet name(s) to pull alarms from
-const EQ_SHEET_MAP = {
-  // exact equipment name -> sheet name in Excel
-  "Drop type Packer":"Packers","2-Axis Delta Robot Packer":"Packers","Pick & Place Gantry Packer":"Packers",
-  "3-Axis Delta Robot Packer":"Packers","Tray & Crate Packer (2 in 1)":"Packers","Top Loading RSC Packer (3 in 1)":"Packers",
-  "Semi Automatic Palletizer":"Palletizer","Robotic Crate Palletizer":"Palletizer","Pantograph Palletizer":"Palletizer",
-  "Hybrid Palletizer":"Palletizer","Robotic Palletizer":"Palletizer",
-  "Robotic Crate Depalletizer":"Depalletizers","Pantograph Depalletizer":"Depalletizers",
-  "Sweep Type Depalletizer":"Depalletizers","Robotic Depalletizer":"Depalletizers",
-  "Crate Inspection":"Inspection Systems","Wooden Pallet Inspection":"Inspection Systems",
-  "Plastic Pallet Inspection":"Inspection Systems","Full Bottle Inspection":"Inspection Systems","Empty Bottle Inspection":"Inspection Systems",
-  "Accumulation Turntable":"Accumulation","FIFO Accumulation Table":"Accumulation",
-  "Mass Flow Accumulation Table":"Accumulation","Row Accumulation Table":"Accumulation","Loop Accumulation":"Accumulation",
-  "Continuous Turning Device":"Motor","Starwheel Divider":"Motor","Continuous Pusher":"Motor",
-  "Segregation Unit For Cartons":"Motor","Step Divider - Merge For Primary":"Motor",
-  "Debagger for square-oval Bottles":"Empty Bottle Handling","Invert Cleaner":"Empty Bottle Handling","Debagger for round bottles":"Empty Bottle Handling",
-  "MDR Conveying":"MDR","Motorized Crate Chute":"Crate Handling","Crate Merging Table":"Crate Handling",
-  "Crate Diverter":"Crate Handling","Crate Orientor":"Crate Handling","Side grip crate elevator - lowerator":"Crate Handling",
-  "Pallet Elevator - lowerator":"Pallet Handling","Pallet turntable":"Pallet Handling","Transfer Car":"Pallet Handling","Pallet 90 Degrees Transfer Unit":"Pallet Handling",
-  "Robotic Rack Unloader":"Plastic & Steel Rack Handling","Rack Washer":"Plastic & Steel Rack Handling","Robotic Rack Loader":"Plastic & Steel Rack Handling",
-  "Modular Plastic Belt Conveyor":"Conveying Systems","Belt Conveyor":"Conveying Systems","Modular Chain Conveyors":"Conveying Systems",
-  "Plastic Chain Conveyor for crate":"Conveying Systems","Roller Conveyor":"Conveying Systems",
-  "Roller - Chain Conveyor for Pallet":"Conveying Systems","Roller Conveyor for Pallet":"Conveying Systems","Modular Chain Conveyor for Pallet":"Conveying Systems"
-};
+// EQ_CATS is populated dynamically from the real data/Alarms/<Category>/<Equipment>.xlsx
+// database by loadFullCatalog() — see CATALOG section below. No more hardcoded/fictional list.
+let EQ_CATS = [];
 
 
 // ══════════════════════════════════════════════════
@@ -1267,7 +1216,9 @@ const EQ_TO_SHEET = {
 // Fallback sheet when the mapped sheet has no data
 const FALLBACK_SHEET = 'Drop Type Packer';
 
-// Called after Excel import — stores ALL alarms per sheet grouped by alarm-type name
+// Legacy: still used by the manual "Settings → Import Excel" / embedded-DB /
+// localStorage-saved-DB flow (a separate, older subsystem from the real
+// data/Alarms catalog above). Kept so those code paths keep working.
 function rebuildTemplates(sheets) {
   SHEET_TEMPLATES = {};
   for (const [sheetName, alarms] of Object.entries(sheets)) {
@@ -1283,59 +1234,129 @@ function rebuildTemplates(sheets) {
     });
     SHEET_TEMPLATES[sheetName] = byGroup;
   }
-  console.log('Templates rebuilt for sheets:', Object.keys(SHEET_TEMPLATES));
+  console.log('Legacy templates rebuilt for sheets:', Object.keys(SHEET_TEMPLATES));
 }
 
-// Get all alarms for entity E{nn} from the correct sheet.
-// Returns: [{alarmType, category, alarms:[{name,desc,value,priority,deleted}]}]
-function getAlarmsForEntity(eqName, entityNum) {
-  const pad = String(entityNum).padStart(2, '0');
-  const eKey = 'E' + pad;  // e.g. "E01", "E03"
+// ══════════════════════════════════════════════════
+//  REAL ALARM DATABASE — data/Alarms/<Category>/<Equipment>.xlsx
+//  Each category folder holds one .xlsx per equipment type.
+//  Each .xlsx has one sheet per alarm/fault type, 8 columns:
+//  Main Category | Sub Category | Sub-Sub Category | Tag | Alarm Name | Description | Severity | ID
+//  Some sheets are "numbered" (pre-baked instances, e.g. L01-MC01..L01-MC14 —
+//  one row per physical unit); others are "static" (a single alarm that applies
+//  once regardless of quantity, e.g. "Accumulation Table Full").
+// ══════════════════════════════════════════════════
+let CATALOG = {}; // { category: { equipmentName: [ {sheetName, numbered, rows:[{mainCat,subCat,subSubCat,tag,name,desc,severity,num}]} ] } }
+const CATALOG_CATEGORIES = ['Equipments','General','Motors','Pneumatics','Sensors','Supplier Machines'];
 
-  // Determine which sheet to use
-  const sheetName = EQ_TO_SHEET[eqName] || FALLBACK_SHEET;
-  let groups = SHEET_TEMPLATES[sheetName];
+// Extract every 2-digit run from a label, e.g. "L01-CL02-M01" -> [1, 2, 1]
+function allInstanceNums(label){
+  const matches = String(label||'').match(/\d{2}/g);
+  return matches ? matches.map(n=>parseInt(n,10)) : [];
+}
 
-  // Fallback: if mapped sheet is empty, try Drop Type Packer as master template
-  if (!groups || !Object.keys(groups).length) {
-    groups = SHEET_TEMPLATES[FALLBACK_SHEET] || {};
-  }
+// Verified against every sheet in the real database: tags with exactly one
+// embedded number use it directly as the physical-instance count (e.g.
+// "L01-MC03" -> 3). Tags with two or more embedded numbers are a
+// <line>-<unit> grid (e.g. "L01-MC01".."L20-MC20", or "E01-R01".."E20-R20")
+// — the FIRST number is the line/system, which we lock to its lowest value
+// (the project has one implicit line), and the SECOND number is the real
+// per-quantity instance count. Any further embedded numbers are constant
+// suffixes (e.g. "...-M01" vs "...-M02" for upstream/downstream) and are
+// left as-is rather than treated as another counter.
+function resolveNumberedRows(rows){
+  const numLists = rows.map(r=>allInstanceNums(r.name));
+  const maxLen = numLists.reduce((m,l)=>Math.max(m,l.length), 0);
+  if(maxLen === 0) return rows.map(r=>({...r, num:null}));
+  if(maxLen === 1) return rows.map((r,i)=>({...r, num: numLists[i][0] ?? null}));
+  const lineVals = numLists.map(l=>l[0]).filter(v=>v!==undefined);
+  const defaultLine = Math.min(...lineVals);
+  const out = [];
+  rows.forEach((r,i)=>{
+    if(numLists[i][0] !== defaultLine) return;
+    out.push({...r, num: numLists[i][1] ?? null});
+  });
+  return out;
+}
 
-  const result = [];
-  for (const [alarmType, data] of Object.entries(groups)) {
-    let entityAlarms;
-
-    // Check if this sheet uses E{nn} prefix (equipment-indexed sheets)
-    const hasEPrefix = data.alarms.some(a => /^E\d{2}[_-]/.test(a.n));
-
-    if (hasEPrefix) {
-      // Standard equipment sheet: filter to this entity's E{pad} alarms
-      entityAlarms = data.alarms.filter(a =>
-        a.n.startsWith(eKey + '_') ||
-        a.n.startsWith(eKey + '-') ||
-        a.n.endsWith('_' + eKey) ||
-        a.n.endsWith('-' + eKey)
-      );
-    } else {
-      // Non-indexed sheet (e.g. Insightech, Common global): use ALL alarms
-      entityAlarms = data.alarms;
+async function fetchCategoryFolder(catName){
+  const equipMap = {};
+  try {
+    const listRes = await fetch(`https://api.github.com/repos/MiguelFaraj-Eng/alarms_configurator/contents/data/Alarms/${encodeURIComponent(catName)}`);
+    if(!listRes.ok) return equipMap; // folder may not exist yet (e.g. Supplier Machines)
+    const files = await listRes.json();
+    if(!Array.isArray(files)) return equipMap;
+    const xlsxFiles = files.filter(f => f.type==='file' && f.name.toLowerCase().endsWith('.xlsx'));
+    for(const file of xlsxFiles){
+      const eqName = file.name.replace(/\.xlsx$/i,'');
+      try {
+        const res = await fetch(file.download_url);
+        if(!res.ok) continue;
+        const buf = await res.arrayBuffer();
+        const wb = XLSX.read(buf, {type:'array'});
+        const sheetDefs = [];
+        wb.SheetNames.forEach(sheetName=>{
+          const ws = wb.Sheets[sheetName];
+          const raw = XLSX.utils.sheet_to_json(ws, {header:1, defval:''});
+          const parsed = raw.slice(1).map(r=>({ // skip header row
+            mainCat: String(r[0]||'').trim(),
+            subCat: String(r[1]||'').trim(),
+            subSubCat: String(r[2]||'').trim(),
+            tag: String(r[3]||'').trim(),
+            name: String(r[4]||'').trim(),
+            desc: String(r[5]||'').trim(),
+            severity: String(r[6]||'').trim()
+          })).filter(r=>r.name || r.desc);
+          if(!parsed.length) return;
+          const rows = resolveNumberedRows(parsed);
+          const numbered = rows.length > 1 && rows.every(r=>r.num!==null);
+          sheetDefs.push({sheetName, numbered, rows});
+        });
+        if(sheetDefs.length) equipMap[eqName] = sheetDefs;
+      } catch(fileErr){ console.warn('Error loading', file.name, fileErr); }
     }
+  } catch(e){ console.warn('Could not load category', catName, e); }
+  return equipMap;
+}
 
-    if (!entityAlarms.length) continue;
+async function loadFullCatalog(){
+  CATALOG = {};
+  EQ_CATS = [];
+  for(const cat of CATALOG_CATEGORIES){
+    const equipMap = await fetchCategoryFolder(cat);
+    const names = Object.keys(equipMap).sort();
+    if(!names.length) continue;
+    CATALOG[cat] = equipMap;
+    EQ_CATS.push({cat, items: names});
+  }
+  console.log('Real alarm catalog loaded:', EQ_CATS.map(c=>`${c.cat} (${c.items.length})`).join(', '));
+}
 
+// Build the alarm groups for one equipment at a given quantity.
+// Numbered sheets are sliced to the first N instances; static sheets are
+// included once (in full) as soon as qty > 0.
+// Returns: [{alarmType, category, alarms:[{name,desc,value,priority,deleted}]}]
+function getAlarmsForEntity(cat, eqName, qty){
+  const sheetDefs = (CATALOG[cat] && CATALOG[cat][eqName]) || [];
+  const result = [];
+  sheetDefs.forEach(sd=>{
+    const rows = sd.numbered ? sd.rows.filter(r=> r.num!==null && r.num<=qty) : (qty>0 ? sd.rows : []);
+    if(!rows.length) return;
     result.push({
-      alarmType,
-      category: data.category,
-      alarms: entityAlarms.map(a => ({
-        name: a.n,
-        desc: a.d,
-        value: a.v,
-        priority: a.p,
+      alarmType: sd.sheetName,
+      category: rows[0].mainCat || 'Uncategorized',
+      alarms: rows.map(r=>({
+        name: r.name,
+        desc: r.desc,
+        value: r.tag,
+        priority: r.severity,
         deleted: false,
-        category: a.cat || data.category
+        category: r.mainCat || 'Uncategorized',
+        subCategory: r.subCat,
+        subSubCategory: r.subSubCat
       }))
     });
-  }
+  });
   return result;
 }
 
@@ -1445,11 +1466,10 @@ function getAllAlarms(){
 // ══════════════════════════════════════════════════
 //  NAVIGATION
 // ══════════════════════════════════════════════════
-const TABS = ['dashboard','project','equipment','configure','export','settings','users'];
+const TABS = ['dashboard','project','configure','export','settings','users'];
 const LOCK_MSG = {
-  equipment:'Complete project info first.',
-  configure:'Select at least one equipment item.',
-  export:'Set quantities first.'
+  configure:'Complete project info first.',
+  export:'Set at least one equipment quantity.'
 };
 
 function tryNav(id){
@@ -1502,139 +1522,98 @@ function showFieldErr(id){
   const e=document.getElementById('err-'+id);
   if(e) e.classList.add('show');
 }
-function goProject(){
+async function goProject(){
   const req=['projectName','clientName','projectRef','projectSite'];
   let ok=true;
   req.forEach(id=>{ if(!document.getElementById(id).value.trim()){ showFieldErr(id); ok=false; }});
   if(!ok){ toast('Fill in all required fields.','err'); document.querySelector('.err')?.scrollIntoView({behavior:'smooth',block:'center'}); return; }
-  S.unlocked.add('equipment');
-  updateTabs();
-  goPage('equipment');
-}
-
-// ══════════════════════════════════════════════════
-//  EQUIPMENT
-// ══════════════════════════════════════════════════
-function renderEquipment(){
-  const grid = document.getElementById('equipmentGrid');
-  grid.innerHTML = EQ_CATS.map(c=>`
-    <div class="eq-cat">
-      <div class="eq-cat-title">${c.cat}</div>
-      <div class="eq-grid">${c.items.map(item=>{
-        const key=c.cat+'|'+item, sel=S.selectedEq.has(key);
-        return `<div class="eq-item ${sel?'selected':''}" onclick="toggleEq('${esc2(key)}')" data-key="${esc2(key)}">
-          <div class="eq-cb">${sel?'✓':''}</div>
-          <div class="eq-name">${item}</div>
-        </div>`;
-      }).join('')}</div>
-    </div>`).join('');
-}
-
-function toggleEq(key){
-  if(S.selectedEq.has(key)){ S.selectedEq.delete(key); delete S.quantities[key]; }
-  else { S.selectedEq.add(key); if(!S.quantities[key]) S.quantities[key]=1; }
-  const el=document.querySelector(`[data-key="${CSS.escape(key)}"]`);
-  if(el){ el.classList.toggle('selected',S.selectedEq.has(key)); el.querySelector('.eq-cb').textContent=S.selectedEq.has(key)?'✓':''; }
-}
-
-function updateSidebarStats(){
-  const total = Object.values(S.importedSheets).reduce((a,b)=>a+b.length,0);
-  const cats = [...new Set(Object.values(S.importedSheets).flatMap(arr=>arr.map(a=>a.group)).filter(Boolean))].length;
-  document.getElementById('stat-entities').textContent = S.selectedEq.size;
-  document.getElementById('stat-alarmtypes').textContent = cats;
-  document.getElementById('stat-alarms').textContent = total > 0 ? total.toLocaleString() : '0';
-}
-
-function goEquipment(){
-  if(!S.selectedEq.size){ toast('Select at least one equipment item.','err'); return; }
   S.unlocked.add('configure');
   S.unlocked.add('export');
   updateTabs();
+  goPage('configure');
+  if(!Object.keys(CATALOG).length){
+    toast('Loading alarm database…','info');
+    await loadFullCatalog();
+    // Auto-include every equipment from the real database — no manual picking
+    EQ_CATS.forEach(c=>c.items.forEach(item=>S.selectedEq.add(c.cat+'|'+item)));
+  }
   buildEntityAlarms();
   renderQtyPanel();
   renderSidebarConfig();
   renderCustomAlarmList();
-  goPage('configure');
   updateStats();
 }
 
 // ══════════════════════════════════════════════════
-//  ALARM BUILDING
+//  EQUIPMENT — legacy no-ops kept so old reset/import call-sites don't break
+//  (the Equipment Selection step no longer exists — see CONFIGURE PAGE below)
 // ══════════════════════════════════════════════════
-function getAlarmsForEquipment(eqName){
-  // Try specific sheet first
-  const sheetName = EQ_SHEET_MAP[eqName];
-  let alarms = [];
-  if(sheetName && S.importedSheets[sheetName] && S.importedSheets[sheetName].length>0){
-    alarms = S.importedSheets[sheetName];
-  } else {
-    // fallback: use Common + VFD
-    alarms = [...(S.importedSheets['Common']||[]), ...(S.importedSheets['VFD']||[])];
-  }
-  return alarms;
+function renderEquipment(){ /* Equipment Selection step removed — nothing to render */ }
+function toggleEq(key){ /* no-op: equipment is no longer manually selected */ }
+
+function updateSidebarStats(){
+  document.getElementById('stat-entities').textContent = Object.keys(S.entityAlarms).length;
+  document.getElementById('stat-alarmtypes').textContent = Object.keys(getCatCounts()).length;
+  const totalAlarms = Object.values(S.entityAlarms).reduce((s,e)=>s+(e.alarmGroups||[]).reduce((ss,g)=>ss+g.alarms.length,0),0);
+  document.getElementById('stat-alarms').textContent = totalAlarms.toLocaleString();
 }
 
+// ══════════════════════════════════════════════════
+//  ALARM BUILDING
+//  One entity per equipment (not per physical unit) — the real per-file
+//  database already bakes instance numbers into each row, so setting a
+//  quantity just slices in that many pre-baked rows per numbered sheet.
+// ══════════════════════════════════════════════════
 function buildEntityAlarms(){
-  // Uses TEMPLATES (E/L) to build per-entity alarm lists
-  // Each equipment unit gets entity key E01, E02...
-  // Alarms are fetched from TEMPLATES['E'] with tag substitution
   S.entityAlarms = {};
-  let eIdx = 1;
-
   EQ_CATS.forEach(c=>c.items.forEach(item=>{
     const key = c.cat+'|'+item;
-    if(!S.selectedEq.has(key)) return;
-    const qty = S.quantities[key]||1;
-
-    for(let i=1; i<=qty; i++){
-      const entityKey = `E${String(eIdx).padStart(2,'0')}`;
-      // Get alarm groups for this entity from the correct sheet template
-      const alarmGroups = getAlarmsForEntity(item, eIdx);
-      S.entityAlarms[entityKey] = {
-        eqName: item,
-        eqCat: c.cat,
-        idx: i,
-        total: qty,
-        alarmGroups  // [{alarmType, category, alarms:[{name,desc,value,priority,deleted}]}]
-      };
-      eIdx++;
-    }
+    const qty = S.quantities[key]||0;
+    if(qty<=0) return;
+    const alarmGroups = getAlarmsForEntity(c.cat, item, qty);
+    if(!alarmGroups.length) return;
+    S.entityAlarms[key] = {
+      eqName: item,
+      eqCat: c.cat,
+      idx: 1,
+      total: 1,
+      qty,
+      alarmGroups
+    };
   }));
 }
 
 // ══════════════════════════════════════════════════
 //  CONFIGURE PAGE
+//  Lists every category/equipment from the real database with a quantity
+//  box (default 0 = excluded). Setting a quantity pulls in that many
+//  pre-baked instances and makes the equipment selectable in the alarm view.
 // ══════════════════════════════════════════════════
 function renderQtyPanel(){
   const cont = document.getElementById('qtyList');
-  const grouped = {};
-  EQ_CATS.forEach(c=>c.items.forEach(item=>{
-    const key=c.cat+'|'+item;
-    if(!S.selectedEq.has(key)) return;
-    if(!grouped[c.cat]) grouped[c.cat]=[];
-    grouped[c.cat].push({key,name:item});
-  }));
-
-  cont.innerHTML = Object.entries(grouped).map(([cat,items])=>`
+  if(!EQ_CATS.length){
+    cont.innerHTML = '<div style="font-size:11px;color:var(--text3);padding:8px 0">Loading alarm database…</div>';
+    return;
+  }
+  cont.innerHTML = EQ_CATS.map(c=>`
     <div style="margin-bottom:14px">
-      <div style="font-family:'DM Mono',monospace;font-size:9px;letter-spacing:2px;text-transform:uppercase;color:var(--text3);padding:5px 0 6px;border-bottom:1px solid var(--border);margin-bottom:6px">${cat}</div>
-      ${items.map(({key,name})=>{
-        const qty = S.quantities[key]||1;
-        const entities = Object.entries(S.entityAlarms).filter(([k,v])=>v.eqName===name);
+      <div style="font-family:'DM Mono',monospace;font-size:9px;letter-spacing:2px;text-transform:uppercase;color:var(--text3);padding:5px 0 6px;border-bottom:1px solid var(--border);margin-bottom:6px">${esc(c.cat)}</div>
+      ${c.items.map(name=>{
+        const key = c.cat+'|'+name;
+        const qty = S.quantities[key]||0;
+        const entity = S.entityAlarms[key];
+        const active = S.activeEntity===key;
         return `<div style="margin-bottom:6px">
-          <div style="font-size:12px;font-weight:500;margin-bottom:4px">${name}</div>
+          <div style="font-size:12px;font-weight:500;margin-bottom:4px;cursor:pointer;${active?'color:var(--accent)':''}" onclick="${entity?`selectEntity('${esc2(key)}')`:''}">${esc(name)}</div>
           <div style="display:flex;align-items:center;gap:0;margin-bottom:5px">
             <button class="qty-minus" onclick="changeQty('${esc2(key)}',-1)">−</button>
-            <input class="qty-num" type="number" min="1" max="99" value="${qty}" oninput="changeQtyDirect('${esc2(key)}',this.value)">
+            <input class="qty-num" type="number" min="0" max="99" value="${qty}" oninput="changeQtyDirect('${esc2(key)}',this.value)">
             <button class="qty-plus" onclick="changeQty('${esc2(key)}',1)">+</button>
-          </div>
-          <div style="display:flex;flex-wrap:wrap;gap:3px">
-            ${entities.map(([ek,ev])=>{
-              const active = S.activeEntity===ek;
-              const totalA = (ev.alarmGroups||[]).reduce((s,g)=>s+g.alarms.length,0);
-              const activeA = (ev.alarmGroups||[]).reduce((s,g)=>s+g.alarms.filter(a=>!a.deleted).length,0);
-              return `<div class="chip ${active?'active':''}" onclick="selectEntity('${ek}')" title="${ev.eqName} unit ${ev.idx}">${ek} <span style="opacity:.7;font-size:9px">${activeA}/${totalA}</span></div>`;
-            }).join('')}
+            ${entity ? (()=>{
+              const totalA = entity.alarmGroups.reduce((s,g)=>s+g.alarms.length,0);
+              const activeA = entity.alarmGroups.reduce((s,g)=>s+g.alarms.filter(a=>!a.deleted).length,0);
+              return `<span class="chip ${active?'active':''}" style="margin-left:6px;cursor:pointer" onclick="selectEntity('${esc2(key)}')">${activeA}/${totalA}</span>`;
+            })() : ''}
           </div>
         </div>`;
       }).join('')}
@@ -1642,21 +1621,25 @@ function renderQtyPanel(){
 }
 
 function changeQty(key, delta){
-  const current = S.quantities[key]||1;
-  const newQty = Math.max(1, current+delta);
+  const current = S.quantities[key]||0;
+  const newQty = Math.max(0, current+delta);
   S.quantities[key] = newQty;
   buildEntityAlarms();
   renderQtyPanel();
   renderSidebarConfig();
   if(S.activeEntity && !S.entityAlarms[S.activeEntity]) S.activeEntity=null;
   if(S.activeEntity) renderAlarmTable(S.activeEntity);
+  updateStats();
 }
 
 function changeQtyDirect(key, val){
-  S.quantities[key] = Math.max(1, parseInt(val)||1);
+  S.quantities[key] = Math.max(0, parseInt(val)||0);
   buildEntityAlarms();
   renderQtyPanel();
   renderSidebarConfig();
+  if(S.activeEntity && !S.entityAlarms[S.activeEntity]) S.activeEntity=null;
+  if(S.activeEntity) renderAlarmTable(S.activeEntity);
+  updateStats();
 }
 
 function renderSidebarConfig(){
@@ -1670,7 +1653,7 @@ function renderSidebarConfig(){
   // Entity chips
   const chips = document.getElementById('entityChips');
   chips.innerHTML = Object.entries(S.entityAlarms).map(([k,v])=>`
-    <div class="chip e-chip ${S.activeEntity===k?'active':''}" onclick="selectEntity('${k}')">${k}</div>
+    <div class="chip e-chip ${S.activeEntity===k?'active':''}" onclick="selectEntity('${esc2(k)}')" title="${esc(v.eqName)}">${esc(v.eqName)}</div>
   `).join('');
 }
 
@@ -1744,14 +1727,14 @@ function renderAlarmTable(entityKey){
   let totalAll=0, totalActive=0;
   entity.alarmGroups.forEach(g=>{ g.alarms.forEach(a=>{ totalAll++; if(!a.deleted) totalActive++; }); });
 
-  document.getElementById('alarmHdrTitle').textContent = `${entityKey} — ${entity.eqName}${entity.total>1?' (Unit '+entity.idx+'/'+entity.total+')':''}`;
+  document.getElementById('alarmHdrTitle').textContent = `${entity.eqName} — Qty ${entity.qty||1}`;
   document.getElementById('alarmHdrBadge').style.display='inline-block';
   document.getElementById('alarmHdrBadge').textContent = entity.eqCat;
   document.getElementById('alarmHdrCount').textContent = `${totalActive.toLocaleString()} / ${totalAll.toLocaleString()} alarms`;
   document.getElementById('alarmHdrActions').style.display='flex';
 
   if(!entity.alarmGroups.length){
-    document.getElementById('alarmTableContainer').innerHTML='<div class="empty-state"><div class="empty-icon">⚠</div><div>No alarms found — import an Excel file in Settings first</div></div>';
+    document.getElementById('alarmTableContainer').innerHTML='<div class="empty-state"><div class="empty-icon">⚠</div><div>No alarms found for this equipment/quantity</div></div>';
     return;
   }
 
@@ -1854,8 +1837,8 @@ function renderAlarmTypes(entityKey){
   }
 
   if(!groups.length){
-    // If we have sheets loaded but no groups, the entity was built before templates were ready — rebuild
-    if(entityKey !== 'COMMON' && Object.keys(SHEET_TEMPLATES).length > 0){
+    // If the catalog is loaded but this entity has no groups yet, rebuild
+    if(entityKey !== 'COMMON' && Object.keys(CATALOG).length > 0){
       buildEntityAlarms();
       const entity2 = S.entityAlarms[entityKey];
       if(entity2 && entity2.alarmGroups.length){
@@ -1863,7 +1846,7 @@ function renderAlarmTypes(entityKey){
       }
     }
     if(!groups.length){
-      el.innerHTML='<div style="padding:8px 0;font-size:11px;color:var(--text3)">No alarm types — import Excel in Settings first</div>';
+      el.innerHTML='<div style="padding:8px 0;font-size:11px;color:var(--text3)">No alarm types for this quantity</div>';
       return;
     }
   }
@@ -2707,8 +2690,12 @@ function onLoginSuccess(){
   document.getElementById('tab-users').style.display = isAdmin ? 'flex' : 'none';
   document.getElementById('ddUsersItem').style.display = isAdmin ? 'flex' : 'none';
 
-  // Auto-load alarm DB from GitHub on login
-  loadAlarmDBFromGitHub();
+  // Auto-load the real alarm catalog (data/Alarms/<Category>/<Equipment>.xlsx) on login
+  if(!Object.keys(CATALOG).length){
+    loadFullCatalog().then(()=>{
+      EQ_CATS.forEach(c=>c.items.forEach(item=>S.selectedEq.add(c.cat+'|'+item)));
+    });
+  }
 
   // Go to dashboard on login
   setTimeout(()=>{ goDashboard(); logActivity('login', `${AUTH.firstName} ${AUTH.lastName} logged in`); }, 100);
@@ -2757,80 +2744,10 @@ document.addEventListener('click', e => {
   if(wrap && !wrap.contains(e.target)) closeUserMenu();
 });
 
-// ── Load alarm template Excel from GitHub ──
-async function loadAlarmDBFromGitHub(){
-  // Only fetch if no local DB is already loaded
-  if(Object.keys(S.importedSheets).length > 0) return;
-  try {
-    // 1. List all .xlsx files in data/Alarms/
-    const listRes = await fetch('https://api.github.com/repos/MiguelFaraj-Eng/alarms_configurator/contents/data/Alarms');
-    if(!listRes.ok) throw new Error('Could not list data/Alarms folder: ' + listRes.status);
-    const files = await listRes.json();
-    const xlsxFiles = files.filter(f => f.type === 'file' && f.name.toLowerCase().endsWith('.xlsx'));
-    if(!xlsxFiles.length) throw new Error('No Excel files found in data/Alarms/');
-
-    // 2. Fetch and parse each file, merging all sheets into one database
-    const merged = {};
-    const fileNames = [];
-    for(const file of xlsxFiles){
-      try {
-        const res = await fetch(file.download_url);
-        if(!res.ok){ console.warn('Could not fetch', file.name, res.status); continue; }
-        const buf = await res.arrayBuffer();
-        const wb = XLSX.read(buf, {type:'array'});
-        wb.SheetNames.forEach(sheetName => {
-          const ws = wb.Sheets[sheetName];
-          const raw = XLSX.utils.sheet_to_json(ws, {header:1, defval:''});
-          const alarms = [];
-          let group = '';
-          raw.forEach(row => {
-            const tag = String(row[0]||'').trim();
-            const desc = String(row[1]||'').trim();
-            if(!tag) return;
-            if(!desc){ group = tag; return; }
-            const cat = String(row[2]||'').trim();
-            const id = row[3] ? parseInt(row[3]) : null;
-            const prio = row[4] !== '' && row[4] !== null && row[4] !== undefined ? parseInt(row[4]) : null;
-            alarms.push({group, tag, description:desc, category:cat, id, priority:prio, sheet:sheetName});
-          });
-          // If the sheet name already exists from another file, append the alarms
-          if(merged[sheetName]){
-            merged[sheetName].push(...alarms);
-          } else {
-            merged[sheetName] = alarms;
-          }
-        });
-        fileNames.push(file.name);
-        console.log('Loaded:', file.name);
-      } catch(fileErr){
-        console.warn('Error loading', file.name, fileErr);
-      }
-    }
-
-    if(!fileNames.length) throw new Error('No files could be loaded from data/Alarms/');
-
-    // 3. Store merged database
-    S.importedSheets = merged;
-    S.importedFile = fileNames.join(', ');
-    rebuildTemplates(S.importedSheets);
-
-    const total = Object.values(merged).reduce((a,b) => a+b.length, 0);
-
-    const el = document.getElementById('importStatusLine');
-    if(el) el.textContent = `✓ ${fileNames.length} file${fileNames.length>1?'s':''} from data/Alarms/ — ${total.toLocaleString()} alarms loaded`;
-
-    const sf = document.getElementById('settingsSheetFilter');
-    if(sf) sf.innerHTML = '<option value="">All Sheets</option>' + Object.keys(merged).map(n=>`<option>${esc(n)}</option>`).join('');
-
-    updateStats();
-    renderSettingsTable();
-    toast(`Alarm database ready — ${total.toLocaleString()} alarms from ${fileNames.length} file${fileNames.length>1?'s':''} ✓`, 'info');
-    console.log('data/Alarms/ loaded:', fileNames, '| total alarms:', total);
-
-  } catch(e) {
-    console.warn('Could not load alarm DB from data/Alarms/:', e);
-  }
-}
+// NOTE: the real alarm database is now loaded by loadFullCatalog() (see the
+// CATALOG section above), which recurses into every data/Alarms/<Category>/
+// folder and parses the actual 8-column format. It's triggered on login and,
+// as a fallback, the first time Configure is opened.
 
 // ── Render User Management page ──
 // ══════════════════════════════════════════════════
@@ -3891,7 +3808,7 @@ function openProject(snapJson){
     S.projectStatus   = snap.status || 'draft';
 
     // Unlock all steps
-    S.unlocked = new Set(['project','equipment','configure','export']);
+    S.unlocked = new Set(['project','configure','export']);
     updateTabs();
 
     // Render equipment checkboxes to reflect restored selections
@@ -4480,7 +4397,7 @@ function renderCommonAlarmsChip(){
   if(!chips) return;
   // Re-render all chips including the COMMON chip
   let html = Object.entries(S.entityAlarms).map(([k,v])=>
-    `<div class="chip e-chip ${S.activeEntity===k?'active':''}" onclick="selectEntity('${k}')">${k}</div>`
+    `<div class="chip e-chip ${S.activeEntity===k?'active':''}" onclick="selectEntity('${esc2(k)}')" title="${esc(v.eqName)}">${esc(v.eqName)}</div>`
   ).join('');
 
   if(S.commonAlarms && S.commonAlarms.length > 0){
