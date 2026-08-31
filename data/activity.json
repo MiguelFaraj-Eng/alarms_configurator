@@ -1,5 +1,13 @@
 [
   {
+    "timestamp": "2026-08-31T12:30:25.290Z",
+    "user": "Miguel",
+    "name": "Miguel Faraj",
+    "role": "admin",
+    "type": "project_delete",
+    "message": "Deleted project \"test\" (owner: Miguel Faraj)"
+  },
+  {
     "timestamp": "2026-08-31T06:42:08.671Z",
     "user": "Miguel",
     "name": "Miguel Faraj",
