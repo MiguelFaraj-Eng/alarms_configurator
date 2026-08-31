@@ -1246,7 +1246,7 @@ function rebuildTemplates(sheets) {
 //  one row per physical unit); others are "static" (a single alarm that applies
 //  once regardless of quantity, e.g. "Accumulation Table Full").
 // ══════════════════════════════════════════════════
-let CATALOG = {}; // { category: { equipmentName: [ {sheetName, numbered, rows:[{mainCat,subCat,subSubCat,tag,name,desc,severity,num}]} ] } }
+let CATALOG = {}; // { category: { equipmentName: { sheets:[{sheetName,numbered,rows:[{...,line,num}]}], hasLines, lineRange:[min,max], instanceRange:[min,max] } } }
 const CATALOG_CATEGORIES = ['Equipments','General','Motors','Pneumatics','Sensors','Supplier Machines'];
 
 // Extract every 2-digit run from a label, e.g. "L01-CL02-M01" -> [1, 2, 1]
@@ -1257,26 +1257,19 @@ function allInstanceNums(label){
 
 // Verified against every sheet in the real database: tags with exactly one
 // embedded number use it directly as the physical-instance count (e.g.
-// "L01-MC03" -> 3). Tags with two or more embedded numbers are a
-// <line>-<unit> grid (e.g. "L01-MC01".."L20-MC20", or "E01-R01".."E20-R20")
-// — the FIRST number is the line/system, which we lock to its lowest value
-// (the project has one implicit line), and the SECOND number is the real
-// per-quantity instance count. Any further embedded numbers are constant
-// suffixes (e.g. "...-M01" vs "...-M02" for upstream/downstream) and are
-// left as-is rather than treated as another counter.
-function resolveNumberedRows(rows){
+// "L01-MC03" -> 3, no line). Tags with two or more embedded numbers are a
+// <line>-<unit> grid (e.g. "L01-MC01".."L20-MC20", "E01-R01".."E20-R20") —
+// the FIRST number is the line/system, the SECOND is the real per-quantity
+// instance count. Any further embedded numbers are constant suffixes
+// (e.g. "...-M01" vs "...-M02" for upstream/downstream) and are left as-is.
+// Unlike before, we now keep EVERY line's rows (annotated with .line/.num)
+// so the person can pick which line/starting instance they actually have.
+function annotateNumberedRows(rows){
   const numLists = rows.map(r=>allInstanceNums(r.name));
   const maxLen = numLists.reduce((m,l)=>Math.max(m,l.length), 0);
-  if(maxLen === 0) return rows.map(r=>({...r, num:null}));
-  if(maxLen === 1) return rows.map((r,i)=>({...r, num: numLists[i][0] ?? null}));
-  const lineVals = numLists.map(l=>l[0]).filter(v=>v!==undefined);
-  const defaultLine = Math.min(...lineVals);
-  const out = [];
-  rows.forEach((r,i)=>{
-    if(numLists[i][0] !== defaultLine) return;
-    out.push({...r, num: numLists[i][1] ?? null});
-  });
-  return out;
+  if(maxLen === 0) return rows.map(r=>({...r, line:null, num:null}));
+  if(maxLen === 1) return rows.map((r,i)=>({...r, line:null, num: numLists[i][0] ?? null}));
+  return rows.map((r,i)=>({...r, line: numLists[i][0] ?? null, num: numLists[i][1] ?? null}));
 }
 
 async function fetchCategoryFolder(catName){
@@ -1295,6 +1288,7 @@ async function fetchCategoryFolder(catName){
         const buf = await res.arrayBuffer();
         const wb = XLSX.read(buf, {type:'array'});
         const sheetDefs = [];
+        let lineMin=null, lineMax=null, instMin=null, instMax=null;
         wb.SheetNames.forEach(sheetName=>{
           const ws = wb.Sheets[sheetName];
           const raw = XLSX.utils.sheet_to_json(ws, {header:1, defval:''});
@@ -1308,11 +1302,24 @@ async function fetchCategoryFolder(catName){
             severity: String(r[6]||'').trim()
           })).filter(r=>r.name || r.desc);
           if(!parsed.length) return;
-          const rows = resolveNumberedRows(parsed);
+          const rows = annotateNumberedRows(parsed);
           const numbered = rows.length > 1 && rows.every(r=>r.num!==null);
           sheetDefs.push({sheetName, numbered, rows});
+          if(numbered){
+            rows.forEach(r=>{
+              if(r.line!==null){ lineMin = lineMin===null?r.line:Math.min(lineMin,r.line); lineMax = lineMax===null?r.line:Math.max(lineMax,r.line); }
+              instMin = instMin===null?r.num:Math.min(instMin,r.num); instMax = instMax===null?r.num:Math.max(instMax,r.num);
+            });
+          }
         });
-        if(sheetDefs.length) equipMap[eqName] = sheetDefs;
+        if(sheetDefs.length){
+          equipMap[eqName] = {
+            sheets: sheetDefs,
+            hasLines: lineMin!==null,
+            lineRange: lineMin!==null ? [lineMin,lineMax] : null,
+            instanceRange: instMin!==null ? [instMin,instMax] : null
+          };
+        }
       } catch(fileErr){ console.warn('Error loading', file.name, fileErr); }
     }
   } catch(e){ console.warn('Could not load category', catName, e); }
@@ -1332,15 +1339,29 @@ async function loadFullCatalog(){
   console.log('Real alarm catalog loaded:', EQ_CATS.map(c=>`${c.cat} (${c.items.length})`).join(', '));
 }
 
-// Build the alarm groups for one equipment at a given quantity.
-// Numbered sheets are sliced to the first N instances; static sheets are
-// included once (in full) as soon as qty > 0.
+// Build the alarm groups for one equipment given a config of
+// {qty, line, start}. Numbered sheets are filtered to the chosen line and
+// sliced to `qty` instances beginning at `start` (e.g. line=2, start=4, qty=3
+// on a Motor -> L02-M04, L02-M05, L02-M06). Static sheets are included once
+// (in full) as soon as qty > 0, regardless of line/start.
 // Returns: [{alarmType, category, alarms:[{name,desc,value,priority,deleted}]}]
-function getAlarmsForEntity(cat, eqName, qty){
-  const sheetDefs = (CATALOG[cat] && CATALOG[cat][eqName]) || [];
+function getAlarmsForEntity(cat, eqName, cfg){
+  const equip = (CATALOG[cat] && CATALOG[cat][eqName]) || null;
+  if(!equip) return [];
+  const qty = cfg.qty||0, line = cfg.line||1, start = cfg.start||1;
   const result = [];
-  sheetDefs.forEach(sd=>{
-    const rows = sd.numbered ? sd.rows.filter(r=> r.num!==null && r.num<=qty) : (qty>0 ? sd.rows : []);
+  equip.sheets.forEach(sd=>{
+    let rows;
+    if(sd.numbered){
+      const hasLines = sd.rows.some(r=>r.line!==null);
+      rows = sd.rows.filter(r=>
+        r.num!==null &&
+        (!hasLines || r.line===line) &&
+        r.num>=start && r.num<start+qty
+      );
+    } else {
+      rows = qty>0 ? sd.rows : [];
+    }
     if(!rows.length) return;
     result.push({
       alarmType: sd.sheetName,
@@ -1564,20 +1585,36 @@ function updateSidebarStats(){
 //  database already bakes instance numbers into each row, so setting a
 //  quantity just slices in that many pre-baked rows per numbered sheet.
 // ══════════════════════════════════════════════════
+// Quantities are now stored as {qty, line, start} objects per equipment key,
+// defaulting line/start to that equipment's lowest available values.
+function getQtyCfg(key, cat, item){
+  const equip = CATALOG[cat] && CATALOG[cat][item];
+  const defLine = equip && equip.lineRange ? equip.lineRange[0] : 1;
+  const defStart = equip && equip.instanceRange ? equip.instanceRange[0] : 1;
+  const stored = S.quantities[key];
+  if(stored && typeof stored==='object'){
+    return { qty: stored.qty||0, line: stored.line ?? defLine, start: stored.start ?? defStart };
+  }
+  // legacy: a saved project might still have a bare number here
+  return { qty: (typeof stored==='number'?stored:0), line: defLine, start: defStart };
+}
+
 function buildEntityAlarms(){
   S.entityAlarms = {};
   EQ_CATS.forEach(c=>c.items.forEach(item=>{
     const key = c.cat+'|'+item;
-    const qty = S.quantities[key]||0;
-    if(qty<=0) return;
-    const alarmGroups = getAlarmsForEntity(c.cat, item, qty);
+    const cfg = getQtyCfg(key, c.cat, item);
+    if(cfg.qty<=0) return;
+    const alarmGroups = getAlarmsForEntity(c.cat, item, cfg);
     if(!alarmGroups.length) return;
     S.entityAlarms[key] = {
       eqName: item,
       eqCat: c.cat,
       idx: 1,
       total: 1,
-      qty,
+      qty: cfg.qty,
+      line: cfg.line,
+      start: cfg.start,
       alarmGroups
     };
   }));
@@ -1585,9 +1622,11 @@ function buildEntityAlarms(){
 
 // ══════════════════════════════════════════════════
 //  CONFIGURE PAGE
-//  Lists every category/equipment from the real database with a quantity
-//  box (default 0 = excluded). Setting a quantity pulls in that many
-//  pre-baked instances and makes the equipment selectable in the alarm view.
+//  Lists every category/equipment from the real database with Qty / Line /
+//  Start controls (Qty default 0 = excluded). Line + Start only show for
+//  equipment whose real sheets are a <line>-<unit> grid — they pick which
+//  physical line and starting unit number the pulled instances begin at,
+//  e.g. Line 2 + Start 4 + Qty 3 on a Motor -> L02-M04, L02-M05, L02-M06.
 // ══════════════════════════════════════════════════
 function renderQtyPanel(){
   const cont = document.getElementById('qtyList');
@@ -1600,19 +1639,35 @@ function renderQtyPanel(){
       <div style="font-family:'DM Mono',monospace;font-size:9px;letter-spacing:2px;text-transform:uppercase;color:var(--text3);padding:5px 0 6px;border-bottom:1px solid var(--border);margin-bottom:6px">${esc(c.cat)}</div>
       ${c.items.map(name=>{
         const key = c.cat+'|'+name;
-        const qty = S.quantities[key]||0;
+        const equip = CATALOG[c.cat][name];
+        const cfg = getQtyCfg(key, c.cat, name);
         const entity = S.entityAlarms[key];
         const active = S.activeEntity===key;
-        return `<div style="margin-bottom:6px">
+        const lineCtl = equip.hasLines ? `
+            <div style="display:flex;flex-direction:column;gap:1px">
+              <span style="font-size:8px;color:var(--text3);letter-spacing:.5px">LINE</span>
+              <input class="qty-num" style="width:44px" type="number" min="${equip.lineRange[0]}" max="${equip.lineRange[1]}" value="${cfg.line}" oninput="changeQtyField('${esc2(key)}','line',this.value)">
+            </div>
+            <div style="display:flex;flex-direction:column;gap:1px">
+              <span style="font-size:8px;color:var(--text3);letter-spacing:.5px">START</span>
+              <input class="qty-num" style="width:44px" type="number" min="${equip.instanceRange[0]}" max="${equip.instanceRange[1]}" value="${cfg.start}" oninput="changeQtyField('${esc2(key)}','start',this.value)">
+            </div>` : '';
+        return `<div style="margin-bottom:8px">
           <div style="font-size:12px;font-weight:500;margin-bottom:4px;cursor:pointer;${active?'color:var(--accent)':''}" onclick="${entity?`selectEntity('${esc2(key)}')`:''}">${esc(name)}</div>
-          <div style="display:flex;align-items:center;gap:0;margin-bottom:5px">
-            <button class="qty-minus" onclick="changeQty('${esc2(key)}',-1)">−</button>
-            <input class="qty-num" type="number" min="0" max="99" value="${qty}" oninput="changeQtyDirect('${esc2(key)}',this.value)">
-            <button class="qty-plus" onclick="changeQty('${esc2(key)}',1)">+</button>
+          <div style="display:flex;align-items:flex-end;gap:6px;margin-bottom:5px">
+            <div style="display:flex;flex-direction:column;gap:1px">
+              <span style="font-size:8px;color:var(--text3);letter-spacing:.5px">QTY</span>
+              <div style="display:flex;align-items:center">
+                <button class="qty-minus" onclick="changeQtyField('${esc2(key)}','qty',${cfg.qty-1})">−</button>
+                <input class="qty-num" type="number" min="0" max="99" value="${cfg.qty}" oninput="changeQtyField('${esc2(key)}','qty',this.value)">
+                <button class="qty-plus" onclick="changeQtyField('${esc2(key)}','qty',${cfg.qty+1})">+</button>
+              </div>
+            </div>
+            ${lineCtl}
             ${entity ? (()=>{
               const totalA = entity.alarmGroups.reduce((s,g)=>s+g.alarms.length,0);
               const activeA = entity.alarmGroups.reduce((s,g)=>s+g.alarms.filter(a=>!a.deleted).length,0);
-              return `<span class="chip ${active?'active':''}" style="margin-left:6px;cursor:pointer" onclick="selectEntity('${esc2(key)}')">${activeA}/${totalA}</span>`;
+              return `<span class="chip ${active?'active':''}" style="cursor:pointer" onclick="selectEntity('${esc2(key)}')">${activeA}/${totalA}</span>`;
             })() : ''}
           </div>
         </div>`;
@@ -1620,20 +1675,17 @@ function renderQtyPanel(){
     </div>`).join('');
 }
 
-function changeQty(key, delta){
-  const current = S.quantities[key]||0;
-  const newQty = Math.max(0, current+delta);
-  S.quantities[key] = newQty;
-  buildEntityAlarms();
-  renderQtyPanel();
-  renderSidebarConfig();
-  if(S.activeEntity && !S.entityAlarms[S.activeEntity]) S.activeEntity=null;
-  if(S.activeEntity) renderAlarmTable(S.activeEntity);
-  updateStats();
-}
-
-function changeQtyDirect(key, val){
-  S.quantities[key] = Math.max(0, parseInt(val)||0);
+function changeQtyField(key, field, val){
+  const [cat, item] = key.split('|');
+  const cfg = getQtyCfg(key, cat, item);
+  const equip = CATALOG[cat][item];
+  let n = parseInt(val);
+  if(isNaN(n)) n = cfg[field];
+  if(field==='qty') n = Math.max(0, Math.min(99, n));
+  if(field==='line' && equip.lineRange) n = Math.max(equip.lineRange[0], Math.min(equip.lineRange[1], n));
+  if(field==='start' && equip.instanceRange) n = Math.max(equip.instanceRange[0], Math.min(equip.instanceRange[1], n));
+  cfg[field] = n;
+  S.quantities[key] = cfg;
   buildEntityAlarms();
   renderQtyPanel();
   renderSidebarConfig();
@@ -1727,7 +1779,9 @@ function renderAlarmTable(entityKey){
   let totalAll=0, totalActive=0;
   entity.alarmGroups.forEach(g=>{ g.alarms.forEach(a=>{ totalAll++; if(!a.deleted) totalActive++; }); });
 
-  document.getElementById('alarmHdrTitle').textContent = `${entity.eqName} — Qty ${entity.qty||1}`;
+  const lineInfo = entity.line!==undefined && entity.line!==null && CATALOG[entity.eqCat] && CATALOG[entity.eqCat][entity.eqName] && CATALOG[entity.eqCat][entity.eqName].hasLines
+    ? ` — Line ${entity.line}, Start ${entity.start}` : '';
+  document.getElementById('alarmHdrTitle').textContent = `${entity.eqName} — Qty ${entity.qty||1}${lineInfo}`;
   document.getElementById('alarmHdrBadge').style.display='inline-block';
   document.getElementById('alarmHdrBadge').textContent = entity.eqCat;
   document.getElementById('alarmHdrCount').textContent = `${totalActive.toLocaleString()} / ${totalAll.toLocaleString()} alarms`;
