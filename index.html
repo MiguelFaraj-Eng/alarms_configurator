@@ -1301,6 +1301,48 @@ function annotateNumberedRows(rows){
   return rows.map((r,i)=>({...r, line: numLists[i][0] ?? null, num: numLists[i][1] ?? null}));
 }
 
+async function fetchOneEquipmentFile(file){
+  const eqName = file.name.replace(/\.xlsx$/i,'');
+  try {
+    const res = await fetch(file.download_url);
+    if(!res.ok) return null;
+    const buf = await res.arrayBuffer();
+    const wb = XLSX.read(buf, {type:'array'});
+    const sheetDefs = [];
+    let lineMin=null, lineMax=null, instMin=null, instMax=null;
+    wb.SheetNames.forEach(sheetName=>{
+      const ws = wb.Sheets[sheetName];
+      const raw = XLSX.utils.sheet_to_json(ws, {header:1, defval:''});
+      const parsed = raw.slice(1).map(r=>({ // skip header row
+        mainCat: String(r[0]||'').trim(),
+        subCat: String(r[1]||'').trim(),
+        subSubCat: String(r[2]||'').trim(),
+        tag: String(r[3]||'').trim(),
+        name: String(r[4]||'').trim(),
+        desc: String(r[5]||'').trim(),
+        severity: String(r[6]||'').trim()
+      })).filter(r=>r.name || r.desc);
+      if(!parsed.length) return;
+      const rows = annotateNumberedRows(parsed);
+      const numbered = rows.length > 1 && rows.every(r=>r.num!==null);
+      sheetDefs.push({sheetName, numbered, rows});
+      if(numbered){
+        rows.forEach(r=>{
+          if(r.line!==null){ lineMin = lineMin===null?r.line:Math.min(lineMin,r.line); lineMax = lineMax===null?r.line:Math.max(lineMax,r.line); }
+          instMin = instMin===null?r.num:Math.min(instMin,r.num); instMax = instMax===null?r.num:Math.max(instMax,r.num);
+        });
+      }
+    });
+    if(!sheetDefs.length) return null;
+    return { eqName, data: {
+      sheets: sheetDefs,
+      hasLines: lineMin!==null,
+      lineRange: lineMin!==null ? [lineMin,lineMax] : null,
+      instanceRange: instMin!==null ? [instMin,instMax] : null
+    }};
+  } catch(fileErr){ console.warn('Error loading', file.name, fileErr); return null; }
+}
+
 async function fetchCategoryFolder(catName){
   const equipMap = {};
   try {
@@ -1309,62 +1351,38 @@ async function fetchCategoryFolder(catName){
     const files = await listRes.json();
     if(!Array.isArray(files)) return equipMap;
     const xlsxFiles = files.filter(f => f.type==='file' && f.name.toLowerCase().endsWith('.xlsx'));
-    for(const file of xlsxFiles){
-      const eqName = file.name.replace(/\.xlsx$/i,'');
-      try {
-        const res = await fetch(file.download_url);
-        if(!res.ok) continue;
-        const buf = await res.arrayBuffer();
-        const wb = XLSX.read(buf, {type:'array'});
-        const sheetDefs = [];
-        let lineMin=null, lineMax=null, instMin=null, instMax=null;
-        wb.SheetNames.forEach(sheetName=>{
-          const ws = wb.Sheets[sheetName];
-          const raw = XLSX.utils.sheet_to_json(ws, {header:1, defval:''});
-          const parsed = raw.slice(1).map(r=>({ // skip header row
-            mainCat: String(r[0]||'').trim(),
-            subCat: String(r[1]||'').trim(),
-            subSubCat: String(r[2]||'').trim(),
-            tag: String(r[3]||'').trim(),
-            name: String(r[4]||'').trim(),
-            desc: String(r[5]||'').trim(),
-            severity: String(r[6]||'').trim()
-          })).filter(r=>r.name || r.desc);
-          if(!parsed.length) return;
-          const rows = annotateNumberedRows(parsed);
-          const numbered = rows.length > 1 && rows.every(r=>r.num!==null);
-          sheetDefs.push({sheetName, numbered, rows});
-          if(numbered){
-            rows.forEach(r=>{
-              if(r.line!==null){ lineMin = lineMin===null?r.line:Math.min(lineMin,r.line); lineMax = lineMax===null?r.line:Math.max(lineMax,r.line); }
-              instMin = instMin===null?r.num:Math.min(instMin,r.num); instMax = instMax===null?r.num:Math.max(instMax,r.num);
-            });
-          }
-        });
-        if(sheetDefs.length){
-          equipMap[eqName] = {
-            sheets: sheetDefs,
-            hasLines: lineMin!==null,
-            lineRange: lineMin!==null ? [lineMin,lineMax] : null,
-            instanceRange: instMin!==null ? [instMin,instMax] : null
-          };
-        }
-      } catch(fileErr){ console.warn('Error loading', file.name, fileErr); }
-    }
+    // Fetch every equipment file in this category in parallel instead of one-by-one
+    const results = await Promise.all(xlsxFiles.map(fetchOneEquipmentFile));
+    results.forEach(r=>{ if(r) equipMap[r.eqName] = r.data; });
   } catch(e){ console.warn('Could not load category', catName, e); }
   return equipMap;
 }
 
+// Single-flight guard: if a load is already in progress (e.g. kicked off in
+// the background on login) and something else needs the catalog (e.g.
+// jumping into Configure), everyone awaits the SAME promise instead of
+// starting a second concurrent load that could race and leave the catalog
+// only partially populated.
+let catalogLoadPromise = null;
+function ensureCatalogLoaded(){
+  if(Object.keys(CATALOG).length) return Promise.resolve();
+  if(!catalogLoadPromise) catalogLoadPromise = loadFullCatalog().finally(()=>{ catalogLoadPromise=null; });
+  return catalogLoadPromise;
+}
+
 async function loadFullCatalog(){
-  CATALOG = {};
-  EQ_CATS = [];
-  for(const cat of CATALOG_CATEGORIES){
+  // Fetch every category in parallel, and only assign to the shared
+  // CATALOG/EQ_CATS globals once everything has resolved — so nothing ever
+  // observes (or renders) a half-populated catalog.
+  const results = await Promise.all(CATALOG_CATEGORIES.map(async cat=>{
     const equipMap = await fetchCategoryFolder(cat);
     const names = Object.keys(equipMap).sort();
-    if(!names.length) continue;
-    CATALOG[cat] = equipMap;
-    EQ_CATS.push({cat, items: names});
-  }
+    return names.length ? {cat, equipMap, names} : null;
+  }));
+  const newCatalog = {}, newCats = [];
+  results.forEach(r=>{ if(r){ newCatalog[r.cat]=r.equipMap; newCats.push({cat:r.cat, items:r.names}); } });
+  CATALOG = newCatalog;
+  EQ_CATS = newCats;
   console.log('Real alarm catalog loaded:', EQ_CATS.map(c=>`${c.cat} (${c.items.length})`).join(', '));
 }
 
@@ -1581,12 +1599,11 @@ async function goProject(){
   S.unlocked.add('export');
   updateTabs();
   goPage('configure');
-  if(!Object.keys(CATALOG).length){
-    toast('Loading alarm database…','info');
-    await loadFullCatalog();
-    // Auto-include every equipment from the real database — no manual picking
-    EQ_CATS.forEach(c=>c.items.forEach(item=>S.selectedEq.add(c.cat+'|'+item)));
-  }
+  const wasLoaded = Object.keys(CATALOG).length > 0;
+  if(!wasLoaded){ toast('Loading alarm database…','info'); renderQtyPanel(); }
+  await ensureCatalogLoaded(); // shares the in-flight load kicked off at login instead of racing it
+  // Auto-include every equipment from the real database — no manual picking
+  EQ_CATS.forEach(c=>c.items.forEach(item=>S.selectedEq.add(c.cat+'|'+item)));
   buildEntityAlarms();
   renderQtyPanel();
   renderSidebarConfig();
@@ -2794,11 +2811,17 @@ function onLoginSuccess(){
   document.getElementById('ddUsersItem').style.display = isAdmin ? 'flex' : 'none';
 
   // Auto-load the real alarm catalog (data/Alarms/<Category>/<Equipment>.xlsx) on login
-  if(!Object.keys(CATALOG).length){
-    loadFullCatalog().then(()=>{
-      EQ_CATS.forEach(c=>c.items.forEach(item=>S.selectedEq.add(c.cat+'|'+item)));
-    });
-  }
+  ensureCatalogLoaded().then(()=>{
+    EQ_CATS.forEach(c=>c.items.forEach(item=>S.selectedEq.add(c.cat+'|'+item)));
+    // Safety net: if the person already reached Configure before this
+    // background load finished, refresh it now that data is in.
+    if(document.getElementById('page-configure')?.classList.contains('active')){
+      buildEntityAlarms();
+      renderQtyPanel();
+      renderSidebarConfig();
+      updateStats();
+    }
+  });
 
   // Go to dashboard on login
   setTimeout(()=>{ goDashboard(); logActivity('login', `${AUTH.firstName} ${AUTH.lastName} logged in`); }, 100);
