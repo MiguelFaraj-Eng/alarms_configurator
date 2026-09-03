@@ -1,5 +1,13 @@
 [
   {
+    "timestamp": "2026-09-03T07:55:25.447Z",
+    "user": "Miguel",
+    "name": "Miguel Faraj",
+    "role": "admin",
+    "type": "project_open",
+    "message": "Opened project \"SOT-1231\" (Testing Project) by Miguel Faraj"
+  },
+  {
     "timestamp": "2026-09-03T07:53:54.784Z",
     "user": "Miguel",
     "name": "Miguel Faraj",
@@ -29,7 +37,7 @@
     "name": "Miguel Faraj",
     "role": "admin",
     "type": "project_save",
-    "message": "Saved project \"SOT-1231\" (Testing Project) v2 ÃÂ¢ÃÂÃÂ status: inprogress"
+    "message": "Saved project \"SOT-1231\" (Testing Project) v2 ÃÂÃÂ¢ÃÂÃÂÃÂÃÂ status: inprogress"
   },
   {
     "timestamp": "2026-09-03T07:37:19.312Z",
@@ -45,7 +53,7 @@
     "name": "Miguel Faraj",
     "role": "admin",
     "type": "project_save",
-    "message": "Saved project \"SOT-1231\" (Testing Project) v1 ÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ status: inprogress"
+    "message": "Saved project \"SOT-1231\" (Testing Project) v1 ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ status: inprogress"
   },
   {
     "timestamp": "2026-09-03T07:33:37.921Z",
