@@ -1,0 +1,179 @@
+{
+  "version": 1,
+  "savedAt": "2026-09-03T11:50:39.320Z",
+  "savedBy": "Rami Rayess",
+  "status": "inprogress",
+  "info": {
+    "projectName": "testest",
+    "projectRef": "stest",
+    "clientName": "estte",
+    "projectSite": "setset",
+    "projectNotes": "tes",
+    "engineerName": "Rami Rayess",
+    "engineerId": "Rami Rayess",
+    "projectDate": "2026-09-03"
+  },
+  "selectedEq": [
+    "Equipments|Infeeder",
+    "Equipments|Interlayer Magazine",
+    "Equipments|Pallet Magazine",
+    "Equipments|Robot",
+    "Equipments|Robot Head",
+    "Equipments|System",
+    "General|General",
+    "Motors|Asynchronous Motor",
+    "Motors|MDR, DDR, PGD",
+    "Motors|Servo Motor",
+    "Pneumatics|Accumulation Table",
+    "Pneumatics|Ambaflex Spiral Conveyor",
+    "Pneumatics|Backstop",
+    "Pneumatics|Carton Holders",
+    "Pneumatics|Destacker",
+    "Pneumatics|Devider",
+    "Pneumatics|Drop-Type Packer",
+    "Pneumatics|Gate",
+    "Pneumatics|Guide",
+    "Pneumatics|Merge",
+    "Pneumatics|Orientor",
+    "Pneumatics|Pressing Device",
+    "Pneumatics|Pusher",
+    "Pneumatics|Rotating Device",
+    "Pneumatics|Sliding Plate",
+    "Pneumatics|Squaring System",
+    "Pneumatics|Squezer",
+    "Pneumatics|Transfer Unit",
+    "Sensors|Inductive Proximity",
+    "Sensors|Magnetic Cylinder",
+    "Sensors|Photocell",
+    "Sensors|Ultrasonic Sensor",
+    "Sensors|Vaccum Sensor",
+    "Supplier Machines|AGV",
+    "Supplier Machines|Barcode",
+    "Supplier Machines|CHP Machine",
+    "Supplier Machines|Case Erector",
+    "Supplier Machines|Case Packer",
+    "Supplier Machines|Case Sealer",
+    "Supplier Machines|Check Weigher",
+    "Supplier Machines|Dryer Machine",
+    "Supplier Machines|Filler Seamer",
+    "Supplier Machines|Pallet Labeler",
+    "Supplier Machines|Printer",
+    "Supplier Machines|QIMAROX Lift",
+    "Supplier Machines|Strech Wrapper",
+    "Supplier Machines|Vacuum Machine",
+    "Supplier Machines|Washer",
+    "Supplier Machines|Xray Machine"
+  ],
+  "quantities": {
+    "Motors|Asynchronous Motor": {
+      "qty": 1,
+      "line": 1,
+      "start": 1
+    }
+  },
+  "entityAlarms": {
+    "Motors|Asynchronous Motor": {
+      "eqName": "Asynchronous Motor",
+      "eqCat": "Motors",
+      "idx": 1,
+      "total": 1,
+      "alarmGroups": [
+        {
+          "alarmType": "Motor Maintenance Switch",
+          "category": "Electrical Failures",
+          "alarms": [
+            {
+              "name": "L01-MS01",
+              "desc": "MAINTENANCE SWITCH OF MOTOR L01-M01 IS SWITCHED OFF, CHECK L01-MS01.",
+              "value": "MS",
+              "priority": "Fault",
+              "deleted": false
+            }
+          ]
+        },
+        {
+          "alarmType": "Inverter Faulted",
+          "category": "Electrical Failures",
+          "alarms": [
+            {
+              "name": "L01-M01 FAULT",
+              "desc": "INVERTER OF MOTOR L01-M01 IS FAULTED OR TURNED OFF.",
+              "value": "M",
+              "priority": "Fault",
+              "deleted": false
+            }
+          ]
+        },
+        {
+          "alarmType": "Inverter Comm Lost",
+          "category": "Electrical Failures",
+          "alarms": [
+            {
+              "name": "L01-M01 COMM LOST",
+              "desc": "COMMUNICATION IS LOST WITH INVERTER OF MOTOR L01-M01 OR ITS BREAKER IS TURNED OFF. CHECK CONNECTIONS THEN PRESS RESET.",
+              "value": "M",
+              "priority": "Fault",
+              "deleted": false
+            }
+          ]
+        },
+        {
+          "alarmType": "Conveyor_Product Stuck",
+          "category": "Operational Failures",
+          "alarms": [
+            {
+              "name": "L01-M01 STUCK",
+              "desc": "PRODUCTION IS STUCK ON CONVEYOR L01-M01 , CHECK AND CLEAR SENSORS ON CONVEYOR L01-M01 OR PRESS RESET FOR 3 SECONDS",
+              "value": "M",
+              "priority": "Fault",
+              "deleted": false
+            }
+          ]
+        },
+        {
+          "alarmType": "Conveyor_Pallet Transfer Timeou",
+          "category": "Operational Failures",
+          "alarms": [
+            {
+              "name": "L01-M01 TRANSFER TIMEOUT",
+              "desc": "PALLET TAKING TOO MUCH TIME GOING TO END OF CONVEYOR L01-M01. CHECK IF PALLET IS STUCK OR IF SENSORS ARE NOT FUNCTIONING WELL THEN PRESS RESET TO RESTART SENDING. PRESS RESET PB FOR 3 SEC TO CANCEL PALLET TRANSFER OPERATION.",
+              "value": "M",
+              "priority": "Fault",
+              "deleted": false
+            }
+          ]
+        },
+        {
+          "alarmType": "Conveyor_No Products",
+          "category": "Operational Interlocks",
+          "alarms": [
+            {
+              "name": "L01-M01 NO PRODUCT",
+              "desc": "CONVEYOR L01-M01 PRODUCT STARVATION. UPSTREAM PRODUCTS MISSING.",
+              "value": "M",
+              "priority": "Information",
+              "deleted": false
+            }
+          ]
+        },
+        {
+          "alarmType": "Conveyor_Pallet Transfer Acknow",
+          "category": "Operational Interlocks",
+          "alarms": [
+            {
+              "name": "L01-M01 ACKNOWLEDGE",
+              "desc": "PALLET IS PRESENT ON CONVEYOR L01-M01 , AND IS AWAITING FOR OPERATOR INTERVENTION AND CONFIRMATION THROUGH CORRESPONDING ACKNOWLEDGE PUSH BUTTON.",
+              "value": "M",
+              "priority": "Information",
+              "deleted": false
+            }
+          ]
+        }
+      ]
+    }
+  },
+  "commonAlarms": [],
+  "customEquipment": [],
+  "customProjectAlarms": [],
+  "versionNum": 1
+}
