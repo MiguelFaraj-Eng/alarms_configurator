@@ -1,5 +1,13 @@
 [
   {
+    "timestamp": "2026-09-03T07:33:32.817Z",
+    "user": "Miguel",
+    "name": "Miguel Faraj",
+    "role": "admin",
+    "type": "export",
+    "message": "Exported project \"SOT-1231\" as SCL-SIEMENS"
+  },
+  {
     "timestamp": "2026-09-03T07:09:47.872Z",
     "user": "Miguel",
     "name": "Miguel Faraj",
