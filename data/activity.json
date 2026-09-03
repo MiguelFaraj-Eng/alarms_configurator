@@ -1,5 +1,13 @@
 [
   {
+    "timestamp": "2026-09-03T07:40:13.572Z",
+    "user": "Miguel",
+    "name": "Miguel Faraj",
+    "role": "admin",
+    "type": "project_save",
+    "message": "Saved project \"SOT-1231\" (Testing Project) v2 — status: inprogress"
+  },
+  {
     "timestamp": "2026-09-03T07:37:19.312Z",
     "user": "Miguel",
     "name": "Miguel Faraj",
@@ -13,7 +21,7 @@
     "name": "Miguel Faraj",
     "role": "admin",
     "type": "project_save",
-    "message": "Saved project \"SOT-1231\" (Testing Project) v1 â status: inprogress"
+    "message": "Saved project \"SOT-1231\" (Testing Project) v1 Ã¢ÂÂ status: inprogress"
   },
   {
     "timestamp": "2026-09-03T07:33:37.921Z",
