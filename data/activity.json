@@ -1,5 +1,13 @@
 [
   {
+    "timestamp": "2026-09-03T07:33:37.921Z",
+    "user": "Miguel",
+    "name": "Miguel Faraj",
+    "role": "admin",
+    "type": "status_change",
+    "message": "Project \"SOT-1231\" status changed from draft to inprogress"
+  },
+  {
     "timestamp": "2026-09-03T07:33:32.817Z",
     "user": "Miguel",
     "name": "Miguel Faraj",
