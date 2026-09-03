@@ -1,0 +1,241 @@
+{
+  "version": 1,
+  "savedAt": "2026-09-03T07:33:38.896Z",
+  "savedBy": "Miguel",
+  "status": "inprogress",
+  "info": {
+    "projectName": "Testing Project",
+    "projectRef": "SOT-1231",
+    "clientName": "Technica",
+    "projectSite": "Qatar",
+    "projectNotes": "",
+    "engineerName": "Miguel Faraj",
+    "engineerId": "Miguel",
+    "projectDate": "2026-09-03"
+  },
+  "selectedEq": [
+    "Equipments|Infeeder",
+    "Equipments|Interlayer Magazine",
+    "Equipments|Pallet Magazine",
+    "Equipments|Robot",
+    "Equipments|Robot Head",
+    "Equipments|System",
+    "General|General",
+    "Motors|Asynchronous Motor",
+    "Motors|MDR, DDR, PGD",
+    "Motors|Servo Motor",
+    "Pneumatics|Accumulation Table",
+    "Pneumatics|Ambaflex Spiral Conveyor",
+    "Pneumatics|Backstop",
+    "Pneumatics|Carton Holders",
+    "Pneumatics|Destacker",
+    "Pneumatics|Devider",
+    "Pneumatics|Drop-Type Packer",
+    "Pneumatics|Gate",
+    "Pneumatics|Guide",
+    "Pneumatics|Merge",
+    "Pneumatics|Orientor",
+    "Pneumatics|Pressing Device",
+    "Pneumatics|Pusher",
+    "Pneumatics|Rotating Device",
+    "Pneumatics|Sliding Plate",
+    "Pneumatics|Squaring System",
+    "Pneumatics|Squezer",
+    "Pneumatics|Transfer Unit",
+    "Sensors|Inductive Proximity",
+    "Sensors|Magnetic Cylinder",
+    "Sensors|Photocell",
+    "Sensors|Ultrasonic Sensor",
+    "Sensors|Vaccum Sensor",
+    "Supplier Machines|AGV",
+    "Supplier Machines|Barcode",
+    "Supplier Machines|CHP Machine",
+    "Supplier Machines|Case Erector",
+    "Supplier Machines|Case Packer",
+    "Supplier Machines|Case Sealer",
+    "Supplier Machines|Check Weigher",
+    "Supplier Machines|Dryer Machine",
+    "Supplier Machines|Filler Seamer",
+    "Supplier Machines|Pallet Labeler",
+    "Supplier Machines|Printer",
+    "Supplier Machines|Strech Wrapper",
+    "Supplier Machines|Vacuum Machine",
+    "Supplier Machines|Washer",
+    "Supplier Machines|Xray Machine"
+  ],
+  "quantities": {
+    "General|General": {
+      "qty": 0,
+      "line": 2,
+      "start": 0
+    },
+    "Equipments|Infeeder": {
+      "qty": 1,
+      "line": 1,
+      "start": 1
+    },
+    "Equipments|Interlayer Magazine": {
+      "qty": 0,
+      "line": 1,
+      "start": 1
+    },
+    "Equipments|Pallet Magazine": {
+      "qty": 0,
+      "line": 1,
+      "start": 1
+    },
+    "Equipments|Robot": {
+      "qty": 0,
+      "line": 1,
+      "start": 1
+    },
+    "Motors|Asynchronous Motor": {
+      "qty": 0,
+      "line": 1,
+      "start": 7
+    },
+    "Motors|MDR, DDR, PGD": {
+      "qty": 0,
+      "line": 1,
+      "start": 9
+    }
+  },
+  "entityAlarms": {
+    "Equipments|Infeeder": {
+      "eqName": "Infeeder",
+      "eqCat": "Equipments",
+      "idx": 1,
+      "total": 1,
+      "alarmGroups": [
+        {
+          "alarmType": "Wrong Count",
+          "category": "Operational Failures",
+          "alarms": [
+            {
+              "name": "Wrong Count",
+              "desc": "WRONG COUNT AT HOPPER. FIX ISSUE THEN GO TO OP CONTROL SCREEN AND INITIALIZE SYSTEM.",
+              "value": "",
+              "priority": "",
+              "deleted": false
+            },
+            {
+              "name": "Wrong Count",
+              "desc": "WRONG CARTONS COUNT ON INFEEDER. FIX ISSUE THEN GO TO OP CONTROL SCREEN AND INITIALIZE SYSTEM.",
+              "value": "",
+              "priority": "",
+              "deleted": false
+            }
+          ]
+        },
+        {
+          "alarmType": "Wrong Cartons Positions Picking",
+          "category": "Operational Failures",
+          "alarms": [
+            {
+              "name": "Wrong Cartons Positions Picking",
+              "desc": "WRONG POSITIONS OF CARTON ON PICKING CONVEYOR. FIX ISSUE THEN GO TO OP CONTROL SCREEN AND INITIALIZE SYSTEM.",
+              "value": "-",
+              "priority": "Critical",
+              "deleted": false
+            }
+          ]
+        },
+        {
+          "alarmType": "Wrong Cartons Positions Buffer",
+          "category": "Operational Failures",
+          "alarms": [
+            {
+              "name": "Wrong Cartons Positions Buffer",
+              "desc": "WRONG POSITIONS OF CARTON ON BUFFER CONVEYOR. FIX ISSUE THEN GO TO OP CONTROL SCREEN AND INITIALIZE SYSTEM.",
+              "value": "-",
+              "priority": "Fault",
+              "deleted": false
+            }
+          ]
+        },
+        {
+          "alarmType": "Remaining Products on Picking",
+          "category": "Operational Failures",
+          "alarms": [
+            {
+              "name": "Remaining Products on Picking",
+              "desc": "REMAINING PRODUCTS ON INFEEDER PICKING CONVEYOR AFTER PICKING. FIX ISSUE (PLACE ON THE PALLET) THEN GO TO OP CONTROL SCREEN AND INITIALIZE SYSTEM.",
+              "value": "-",
+              "priority": "Fault",
+              "deleted": false
+            }
+          ]
+        },
+        {
+          "alarmType": "Wrong Cartons Alignment",
+          "category": "Operational Failures",
+          "alarms": [
+            {
+              "name": "Wrong Cartons Alignment",
+              "desc": "WRONG ALIGNMENT OF CARTONS ON INFEEDER PICKING CONVEYOR. FIX ISSUE THEN GO TO CONTROL SCREEN AND INITIALIZE SYSTEM.",
+              "value": "-",
+              "priority": "Fault",
+              "deleted": false
+            }
+          ]
+        },
+        {
+          "alarmType": "Product Pick Failure",
+          "category": "Operational Failures",
+          "alarms": [
+            {
+              "name": "Product Pick Failure",
+              "desc": "PRODUCT IS NOT CORRECTLY PICKED FROM INFEEDER. FIX ISSUE THEN GO TO OP CONTROL SCREEN AND INITIALIZE SYSTEM.",
+              "value": "-",
+              "priority": "Fault",
+              "deleted": false
+            }
+          ]
+        },
+        {
+          "alarmType": "Clearance Detection",
+          "category": "Operational Failures",
+          "alarms": [
+            {
+              "name": "Clearance Detection",
+              "desc": "CLEARANCE SENSOR IS DETECTING A CARTON ON INFEEDER PICKING CONVEYOR. FIX ISSUE THEN GO TO OP CONTROL SCREEN AND INITIALIZE SYSTEM.",
+              "value": "-",
+              "priority": "Fault",
+              "deleted": false
+            }
+          ]
+        }
+      ]
+    }
+  },
+  "commonAlarms": [],
+  "customEquipment": [],
+  "customProjectAlarms": [
+    {
+      "id": 1788420601034,
+      "name": "Custom Example",
+      "desc": "testing for eliane",
+      "group": "Infeeder",
+      "category": "Operational",
+      "value": "516516841351",
+      "priority": null,
+      "deleted": true,
+      "createdBy": "Miguel",
+      "createdAt": "2026-09-03T07:30:01.034Z"
+    },
+    {
+      "id": 1788420703018,
+      "name": "test_Count",
+      "desc": "ahjdkfbadfajklsdf Eliane Testing",
+      "group": "Infeeder",
+      "category": "Infeeder",
+      "value": "6445151",
+      "priority": null,
+      "deleted": false,
+      "createdBy": "Miguel",
+      "createdAt": "2026-09-03T07:31:43.018Z"
+    }
+  ],
+  "versionNum": 1,
+  "versionSavedAt": "2026-09-03T07:33:40.565Z"
+}
