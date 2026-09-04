@@ -437,6 +437,14 @@ html.light .login-logo{filter:none;}
 .dash-user-avatar{width:28px;height:28px;border-radius:50%;background:var(--accent);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:#fff;flex-shrink:0}
 .dash-empty{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:60px 20px;gap:12px;color:var(--text3);text-align:center}
 .dash-empty-icon{font-size:48px;opacity:.35}
+
+/* ── PROJECT ASSIGNMENT / READ-ONLY MODE ─────────────────────────────── */
+.ro-locked{pointer-events:none;opacity:.55;filter:grayscale(.25);user-select:none;}
+.ro-banner{display:none;align-items:center;gap:10px;background:var(--yellow-light);color:var(--yellow);border-bottom:1px solid var(--border);padding:10px 24px;font-size:12px;font-weight:600;flex-shrink:0;}
+.role-pill{display:inline-flex;align-items:center;gap:4px;font-size:9px;font-weight:700;padding:2px 8px;border-radius:10px;text-transform:uppercase;letter-spacing:.5px;}
+.role-owner{background:var(--accent-light);color:var(--accent);}
+.role-editor{background:var(--green-light);color:var(--green);}
+.role-viewer{background:var(--surface2);color:var(--text3);border:1px solid var(--border);}
 </style>
 </head>
 <body>
@@ -525,6 +533,9 @@ html.light .login-logo{filter:none;}
   </div>
 </header>
 
+<!-- VIEW-ONLY BANNER -->
+<div class="ro-banner" id="readOnlyBanner">👁 View only — you were given view access to this project and can't edit or save changes to it.</div>
+
 <!-- ═══════════ BODY ═══════════ -->
 <div class="app-body">
 
@@ -588,7 +599,7 @@ html.light .login-logo{filter:none;}
         </div>
         <div style="margin-left:auto;font-family:'DM Mono',monospace;font-size:11px;color:var(--text3)" id="projDateDisplay">—</div>
       </div>
-      <div class="card">
+      <div class="card" id="projectInfoCard">
         <div class="form-row full"><div class="fg">
           <label>Project Name *</label>
           <input type="text" id="projectName" placeholder="e.g. Brewery Line 3 Upgrade" oninput="clearErr(this)">
@@ -606,6 +617,12 @@ html.light .login-logo{filter:none;}
           <textarea id="projectNotes" rows="2" placeholder="Optional notes..." style="resize:vertical"></textarea>
         </div></div>
       </div>
+      <!-- ASSIGN ENGINEERS (admin only) -->
+      <div class="card" id="assignEngineersCard" style="display:none">
+        <div style="font-size:13px;font-weight:600;margin-bottom:4px">👥 Assign Engineers</div>
+        <div style="font-size:11px;color:var(--text2);margin-bottom:14px">Give other engineers access to this project. Checked engineers can open it from their own dashboard — toggle Can Edit / View Only for each. Unchecked = no access.</div>
+        <div id="assignEngineersList" style="display:flex;flex-direction:column;gap:2px"></div>
+      </div>
       <!-- hidden fields populated from AUTH -->
       <input type="hidden" id="engineerName">
       <input type="hidden" id="engineerId">
@@ -621,15 +638,17 @@ html.light .login-logo{filter:none;}
     <div style="display:flex;height:100%;overflow:hidden;">
       <!-- Left: qty panel -->
       <div style="width:300px;flex-shrink:0;border-right:1px solid var(--border);overflow-y:auto;padding:20px 16px;background:var(--surface);">
-        <div style="font-size:14px;font-weight:700;margin-bottom:14px;">Equipment & Quantities</div>
-        <div id="qtyList"></div>
-        <!-- Custom alarms section -->
-        <div style="margin-top:16px;padding-top:16px;border-top:1px solid var(--border)">
-          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
-            <div style="font-size:12px;font-weight:600;color:var(--text2)">Custom Alarms</div>
-            <button class="btn btn-sm btn-outline" onclick="openCustomAlarmModal()" style="font-size:10px;padding:3px 8px">+ Add</button>
+        <div id="configureEditableZone">
+          <div style="font-size:14px;font-weight:700;margin-bottom:14px;">Equipment & Quantities</div>
+          <div id="qtyList"></div>
+          <!-- Custom alarms section -->
+          <div style="margin-top:16px;padding-top:16px;border-top:1px solid var(--border)">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+              <div style="font-size:12px;font-weight:600;color:var(--text2)">Custom Alarms</div>
+              <button class="btn btn-sm btn-outline" onclick="openCustomAlarmModal()" style="font-size:10px;padding:3px 8px">+ Add</button>
+            </div>
+            <div id="customAlarmList" style="font-size:11px;color:var(--text3)">No custom alarms</div>
           </div>
-          <div id="customAlarmList" style="font-size:11px;color:var(--text3)">No custom alarms</div>
         </div>
         <div style="margin-top:16px;padding-top:16px;border-top:1px solid var(--border);">
           <button class="btn btn-primary" style="width:100%" onclick="goPage('export');renderExport()">View Summary →</button>
@@ -696,7 +715,7 @@ html.light .login-logo{filter:none;}
         </div>
       </div>
       <!-- Project Status -->
-      <div class="card" style="margin-bottom:16px">
+      <div class="card" style="margin-bottom:16px" id="projectStatusCard">
         <div style="font-size:13px;font-weight:600;margin-bottom:12px">Project Status</div>
         <div style="display:flex;gap:8px;flex-wrap:wrap">
           <button class="status-btn" data-status="draft" onclick="setProjectStatus('draft')">📝 Draft</button>
@@ -1191,6 +1210,13 @@ const S = {
   exportPrefs: { siemensDB:'FIELD', siemensExt:'txt', rockwellArray:'AlarmCfg_UN01', rockwellExt:'txt' },
   pendingExportType: null,
 
+  // Project ownership / sharing — who the open project's storage folder
+  // belongs to, who else it's shared with, and whether the current user
+  // only has view access to it (see computeProjectRole()/applyReadOnlyUI())
+  currentProjectOwner: null,   // { ownerFolder, username } — set on create/open
+  assignedEngineers: [],       // [{ username, name, canEdit }] — admin-managed
+  readOnly: false,
+
   // Nav unlock
   unlocked: new Set(['project'])
 };
@@ -1607,6 +1633,8 @@ function goPage(id){
   document.getElementById('sb-cats-section').style.display = showSidebar?'block':'none';
   document.getElementById('sb-types-section').style.display = showSidebar?'block':'none';
   window.scrollTo(0,0);
+  if(id==='project') renderAssignEngineersCard();
+  applyReadOnlyUI();
 }
 
 // ══════════════════════════════════════════════════
@@ -1624,6 +1652,7 @@ function showFieldErr(id){
   if(e) e.classList.add('show');
 }
 async function goProject(){
+  if(S.readOnly){ goPage('configure'); return; } // just browse — never rebuild an already-loaded project
   const req=['projectName','clientName','projectRef','projectSite'];
   let ok=true;
   req.forEach(id=>{ if(!document.getElementById(id).value.trim()){ showFieldErr(id); ok=false; }});
@@ -2893,6 +2922,12 @@ function populateEngineerBanner(){
 }
 
 function onLoginSuccess(){
+  // Default project ownership to "myself" until a project is opened or
+  // reset — see computeProjectRole()/openProject()/resetWizard().
+  S.currentProjectOwner = { ownerFolder: (AUTH.firstName+' '+AUTH.lastName).trim(), username: AUTH.username };
+  S.assignedEngineers = [];
+  S.readOnly = false;
+
   // Populate engineer info on project page
   populateEngineerBanner();
   document.getElementById('userMenuWrap').style.display = 'flex';
@@ -3658,8 +3693,8 @@ function tryUsers(){
 //  PROJECTS — SAVE / LOAD / DASHBOARD
 // ══════════════════════════════════════════════════
 
-function getProjectPath(firstName, lastName, projectRef){
-  const userName   = `${firstName} ${lastName}`.trim();
+function getProjectPath(ownerFolder, projectRef){
+  const userName   = String(ownerFolder||'').trim();
   const safeRef    = (projectRef||'unnamed').trim();
   return {
     apiPath  : `Projects/${userName}/${safeRef}/project.json`,
@@ -3675,8 +3710,11 @@ function buildProjectSnapshot(){
     clientName  : (document.getElementById('clientName')||{}).value||'',
     projectSite : (document.getElementById('projectSite')||{}).value||'',
     projectNotes: (document.getElementById('projectNotes')||{}).value||'',
-    engineerName: AUTH.firstName + ' ' + AUTH.lastName,
-    engineerId  : AUTH.username,
+    // The project's owner — preserved across saves by an assigned editor
+    // (S.currentProjectOwner is set when the project is opened/created; it
+    // is NOT the same as "whoever is currently logged in and saving").
+    engineerName: (S.currentProjectOwner && S.currentProjectOwner.ownerFolder) || (AUTH.firstName + ' ' + AUTH.lastName),
+    engineerId  : (S.currentProjectOwner && S.currentProjectOwner.username)   || AUTH.username,
     projectDate : new Date().toISOString().split('T')[0]
   };
 
@@ -3736,6 +3774,14 @@ function buildProjectSnapshot(){
     if(Array.isArray(raw)) customProjectAlarms = JSON.parse(JSON.stringify(raw));
   } catch(e){}
 
+  // assignedEngineers — [{username, name, canEdit}], admin-managed (see
+  // renderAssignEngineersCard()). Empty for engineer-created projects.
+  let assignedEngineers = [];
+  try {
+    const raw = S.assignedEngineers;
+    if(Array.isArray(raw)) assignedEngineers = JSON.parse(JSON.stringify(raw));
+  } catch(e){}
+
   return {
     version: 1,
     savedAt: new Date().toISOString(),
@@ -3747,11 +3793,13 @@ function buildProjectSnapshot(){
     entityAlarms,
     commonAlarms,
     customEquipment,
-    customProjectAlarms
+    customProjectAlarms,
+    assignedEngineers
   };
 }
 
 async function saveProjectToGitHub(){
+  if(S.readOnly){ toast('You have view-only access to this project — changes can\'t be saved.','err'); return; }
   const ref = (document.getElementById('projectRef')||{}).value||'';
   if(!ref){ toast('Enter a Project Reference first (Step 1).','err'); return; }
 
@@ -3767,8 +3815,12 @@ async function saveProjectToGitHub(){
       throw new Error('Failed to build snapshot: ' + snapErr.message);
     }
 
-    const pathObj = getProjectPath(AUTH.firstName, AUTH.lastName, ref);
-    const userName = AUTH.firstName + ' ' + AUTH.lastName;
+    // Always save back into the project's OWNER folder — not necessarily
+    // the current user's own folder, since an assigned editor saving
+    // someone else's project must update the original file, not fork it.
+    const ownerFolder = (S.currentProjectOwner && S.currentProjectOwner.ownerFolder) || (AUTH.firstName + ' ' + AUTH.lastName);
+    const pathObj = getProjectPath(ownerFolder, ref);
+    const userName = ownerFolder;
 
     // Get next version number
     const versionNum = await getNextVersionNumber(userName, ref);
@@ -3776,11 +3828,18 @@ async function saveProjectToGitHub(){
 
     const jsonStr = JSON.stringify(snapshot, null, 2);
 
-    // Check if file already exists (need sha for update)
+    // Check if file already exists (need sha for update); also read the
+    // previously-saved assignedEngineers so we can diff and update the
+    // per-engineer assignment indexes below.
     let sha = undefined;
+    let oldAssigned = [];
     try {
       const existing = await githubRequest('GET', pathObj.apiPath);
       sha = existing.sha;
+      try {
+        const oldSnap = JSON.parse(atob(existing.content.replace(/\n/g,'')));
+        oldAssigned = Array.isArray(oldSnap.assignedEngineers) ? oldSnap.assignedEngineers : [];
+      } catch(parseErr){ /* couldn't read previous assignment list — treat as empty */ }
     } catch(e){ /* new project — no sha needed */ }
 
     // Save latest project.json
@@ -3793,6 +3852,11 @@ async function saveProjectToGitHub(){
     // Save version snapshot
     await saveVersion(userName, ref, snapshot, versionNum);
 
+    // Keep each assigned engineer's lightweight "shared with me" index in
+    // sync so their dashboard can find this project without a full org scan.
+    try { await syncAssignmentIndexes(ownerFolder, pathObj.projectRef, oldAssigned, snapshot.assignedEngineers||[]); }
+    catch(syncErr){ console.warn('Assignment index sync failed:', syncErr); }
+
     toast(`Project "${ref}" saved to GitHub ✓`);
     await logActivity('project_save', `Saved project "${ref}" (${snapshot.info?.projectName||''}) v${versionNum} — status: ${S.projectStatus||'draft'}`);
     notifyAdminProjectSaved(ref, S.projectStatus||'draft');
@@ -3800,6 +3864,47 @@ async function saveProjectToGitHub(){
     toast('Save failed: ' + e.message,'err');
   } finally {
     if(btn){ btn.innerHTML=origText; btn.disabled=false; }
+  }
+}
+
+// Keeps Projects/_assignments/<username>.json in sync for every engineer
+// whose access to this project changed (added, removed, or edit/view
+// flipped). Each file is a lightweight array of pointers to projects
+// owned by someone else, so an engineer's dashboard only has to fetch
+// their own folder + this one small file instead of scanning every
+// engineer's folder on every load.
+async function syncAssignmentIndexes(ownerFolder, projectRef, oldAssigned, newAssigned){
+  const oldMap = new Map((oldAssigned||[]).map(a=>[a.username, a]));
+  const newMap = new Map((newAssigned||[]).map(a=>[a.username, a]));
+  const usernames = new Set([...oldMap.keys(), ...newMap.keys()]);
+
+  for(const uname of usernames){
+    const wasIn = oldMap.has(uname), isIn = newMap.has(uname);
+    const before = wasIn ? !!oldMap.get(uname).canEdit : null;
+    const after  = isIn  ? !!newMap.get(uname).canEdit : null;
+    if(wasIn===isIn && before===after) continue; // nothing changed for this engineer
+
+    const path = `Projects/_assignments/${uname}.json`;
+    let list = [], sha;
+    try {
+      const res = await githubRequest('GET', path);
+      sha = res.sha;
+      list = JSON.parse(atob(res.content.replace(/\n/g,''))) || [];
+      if(!Array.isArray(list)) list = [];
+    } catch(e){ list = []; }
+
+    list = list.filter(p=>!(p.ownerFolder===ownerFolder && p.projectRef===projectRef));
+    if(isIn){
+      list.push({ ownerFolder, projectRef, canEdit: !!newMap.get(uname).canEdit });
+    }
+
+    try {
+      await githubRequest('PUT', path, {
+        message: `Update project assignment index for ${uname}`,
+        rawContent: JSON.stringify(list, null, 2),
+        ...(sha ? { sha } : {})
+      });
+    } catch(putErr){ console.warn('Failed to update assignment index for', uname, putErr); }
   }
 }
 
@@ -3825,7 +3930,7 @@ async function loadDashboard(){
 
     try {
       const data = await githubRequest('GET', 'Projects');
-      userFolders = Array.isArray(data) ? data.filter(f=>f.type==='dir') : [];
+      userFolders = Array.isArray(data) ? data.filter(f=>f.type==='dir' && f.name!=='_assignments') : [];
       if(!isAdmin){
         const myFolder = AUTH.firstName + ' ' + AUTH.lastName;
         userFolders = userFolders.filter(f=>f.name === myFolder);
@@ -3834,12 +3939,6 @@ async function loadDashboard(){
       if(e.message && (e.message.includes('404') || e.message.includes('500') || e.message.includes('Not Found'))){
         userFolders = [];
       }
-    }
-
-    if(!userFolders.length){
-      content.innerHTML = `<div class="dash-empty"><div class="dash-empty-icon">📂</div><div style="font-size:14px;font-weight:600">No projects yet</div><div style="font-size:12px">Complete the wizard and click <strong>Save Project to GitHub</strong> on the Export page</div></div>`;
-      subtitle.textContent = 'No projects found';
-      return;
     }
 
     let totalProjects = 0;
@@ -3857,20 +3956,45 @@ async function loadDashboard(){
         try {
           const jData = await githubRequest('GET', `Projects/${userFolder.name}/${pf.name}/project.json`);
           const snap = JSON.parse(atob(jData.content.replace(/\n/g,'')));
-          projects.push({ snap, sha: jData.sha, folderName: pf.name, userName: userFolder.name });
+          projects.push({ snap, sha: jData.sha, folderName: pf.name, userName: userFolder.name, role: isAdmin?'admin':'owner' });
         } catch(e){ continue; }
       }
       if(projects.length) groups.push({ userName: userFolder.name, projects });
       totalProjects += projects.length;
     }
 
-    subtitle.textContent = `${totalProjects} project${totalProjects!==1?'s':''} found`;
+    // Non-admins: also pull in projects shared with them, via their own
+    // lightweight pointer file — avoids scanning every engineer's folder
+    // (which would blow through the shared GitHub PAT's rate limit).
+    if(!isAdmin){
+      try {
+        const idxRes = await githubRequest('GET', `Projects/_assignments/${AUTH.username}.json`);
+        const pointers = JSON.parse(atob(idxRes.content.replace(/\n/g,'')));
+        const sharedProjects = [];
+        if(Array.isArray(pointers)){
+          for(const ptr of pointers){
+            try {
+              const jData = await githubRequest('GET', `Projects/${ptr.ownerFolder}/${ptr.projectRef}/project.json`);
+              const snap = JSON.parse(atob(jData.content.replace(/\n/g,'')));
+              sharedProjects.push({ snap, sha: jData.sha, folderName: ptr.projectRef, userName: ptr.ownerFolder, role: ptr.canEdit?'editor':'viewer' });
+            } catch(e){ continue; } // project since deleted/renamed — skip stale pointer
+          }
+        }
+        if(sharedProjects.length){
+          groups.push({ userName: 'Shared with me', projects: sharedProjects });
+          totalProjects += sharedProjects.length;
+        }
+      } catch(e){ /* no assignment file yet — nothing shared, that's fine */ }
+    }
 
-    if(!groups.length){
-      document.getElementById('dashStats').innerHTML = '';
+    if(!totalProjects){
       content.innerHTML = `<div class="dash-empty"><div class="dash-empty-icon">📂</div><div style="font-size:14px;font-weight:600">No projects yet</div><div style="font-size:12px">Complete the wizard and click <strong>Save Project to GitHub</strong> on the Export page</div></div>`;
+      subtitle.textContent = 'No projects found';
+      document.getElementById('dashStats').innerHTML = '';
       return;
     }
+
+    subtitle.textContent = `${totalProjects} project${totalProjects!==1?'s':''} found`;
 
     // Compute dashboard stats
     const allProjects = groups.flatMap(g=>g.projects);
@@ -3916,6 +4040,7 @@ function filterDashboard(){
 function renderDashCards(groups){
   const content = document.getElementById('dashContent');
   const isAdmin = AUTH.role === 'admin';
+  const myFolder = (AUTH.firstName + ' ' + AUTH.lastName).trim();
   content.innerHTML = '';
 
   if(!groups.length){
@@ -3924,28 +4049,32 @@ function renderDashCards(groups){
   }
 
   const statusMap = {draft:{cls:'status-draft',label:'Draft'},inprogress:{cls:'status-inprogress',label:'In Progress'},completed:{cls:'status-completed',label:'Completed'},delivered:{cls:'status-delivered',label:'Delivered'}};
+  const roleMap = {admin:null, owner:null, editor:{cls:'role-editor',label:'✎ Editor'}, viewer:{cls:'role-viewer',label:'👁 Viewer'}};
 
   groups.forEach(group => {
     const wrap = document.createElement('div');
     wrap.style.marginBottom = '28px';
 
-    if(isAdmin && groups.length > 1){
-      const initials = group.userName.split(' ').map(w=>w[0]||'').join('').slice(0,2).toUpperCase();
+    if(groups.length > 1){
+      const headerLabel = group.userName === myFolder ? 'My Projects' : group.userName;
+      const initials = headerLabel==='My Projects' ? '★' : headerLabel.split(' ').map(w=>w[0]||'').join('').slice(0,2).toUpperCase();
       const label = document.createElement('div');
       label.className = 'dash-user-label';
-      label.innerHTML = `<div class="dash-user-avatar">${initials}</div><div style="font-size:13px;font-weight:600">${esc(group.userName)}</div><div style="font-size:11px;color:var(--text3);margin-left:4px">${group.projects.length} project${group.projects.length!==1?'s':''}</div>`;
+      label.innerHTML = `<div class="dash-user-avatar">${initials}</div><div style="font-size:13px;font-weight:600">${esc(headerLabel)}</div><div style="font-size:11px;color:var(--text3);margin-left:4px">${group.projects.length} project${group.projects.length!==1?'s':''}</div>`;
       wrap.appendChild(label);
     }
 
     const grid = document.createElement('div');
     grid.className = 'proj-grid';
 
-    group.projects.forEach(({snap, folderName, userName}) => {
+    group.projects.forEach(({snap, folderName, userName, role}) => {
       const info = snap.info || {};
       const eqCount = (snap.selectedEq||[]).length;
       const savedAt = snap.savedAt ? new Date(snap.savedAt).toLocaleString() : '—';
       const status = snap.status || 'draft';
       const {cls, label} = statusMap[status] || statusMap.draft;
+      const roleBadge = roleMap[role];
+      const canDelete = isAdmin || role==='owner';
 
       const card = document.createElement('div');
       card.className = 'proj-card';
@@ -3956,6 +4085,7 @@ function renderDashCards(groups){
             <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px">
               <div class="proj-ref" style="margin-bottom:0">${esc(info.projectRef||folderName)}</div>
               <span class="status-badge ${cls}">${label}</span>
+              ${roleBadge?`<span class="role-pill ${roleBadge.cls}">${roleBadge.label}</span>`:''}
             </div>
             <div class="proj-name">${esc(info.projectName||'Untitled Project')}</div>
             <div class="proj-client">${esc(info.clientName||'—')}</div>
@@ -3972,14 +4102,15 @@ function renderDashCards(groups){
             <button class="btn btn-primary btn-sm proj-open-btn">▶ Open</button>
             <button class="btn btn-outline btn-sm proj-hist-btn" title="Version history">🕐</button>
             <button class="btn btn-outline btn-sm proj-dup-btn" title="Duplicate">⧉</button>
-            <button class="btn btn-outline btn-sm proj-del-btn" style="color:var(--red);border-color:var(--red)">🗑</button>
+            ${canDelete?'<button class="btn btn-outline btn-sm proj-del-btn" style="color:var(--red);border-color:var(--red)">🗑</button>':''}
           </div>
         </div>`;
 
       card.querySelector('.proj-open-btn').addEventListener('click', ()=>{ openProject(card.dataset.snap); });
-      card.querySelector('.proj-hist-btn').addEventListener('click', (e)=>{ e.stopPropagation(); openVersionHistory(group.userName, folderName); });
+      card.querySelector('.proj-hist-btn').addEventListener('click', (e)=>{ e.stopPropagation(); openVersionHistory(userName, folderName); });
       card.querySelector('.proj-dup-btn').addEventListener('click', (e)=>{ e.stopPropagation(); duplicateProject(card.dataset.snap, userName); });
-      card.querySelector('.proj-del-btn').addEventListener('click', (e)=>{ e.stopPropagation(); deleteProject(userName, folderName); });
+      const delBtn = card.querySelector('.proj-del-btn');
+      if(delBtn) delBtn.addEventListener('click', (e)=>{ e.stopPropagation(); deleteProject(userName, folderName); });
       grid.appendChild(card);
     });
 
@@ -3988,10 +4119,126 @@ function renderDashCards(groups){
   });
 }
 
+// ── PROJECT ACCESS / READ-ONLY MODE ─────────────────────────────────────
+// Determines the current user's relationship to a project snapshot:
+//   'admin'  — always full edit rights, regardless of ownership
+//   'owner'  — created/owns the project (its storage folder)
+//   'editor' — assigned by admin with edit rights
+//   'viewer' — assigned by admin with view-only rights
+//   'none'   — not admin, not owner, not assigned (shouldn't normally
+//              reach the wizard this way, but treated as view-only as a
+//              safety net rather than crashing)
+function computeProjectRole(snap){
+  if(AUTH.role === 'admin') return 'admin';
+  const info = (snap && snap.info) || {};
+  if(info.engineerId && info.engineerId === AUTH.username) return 'owner';
+  const a = ((snap && snap.assignedEngineers) || []).find(x=>x.username===AUTH.username);
+  if(a) return a.canEdit ? 'editor' : 'viewer';
+  return 'none';
+}
+
+// Locks down every mutating control on the currently-active page when
+// S.readOnly is set, and shows the view-only banner. This is a CLIENT-SIDE
+// convenience only — like the rest of this app's role checks, it isn't a
+// real security boundary (there's no server-side per-user authorization
+// on the GitHub proxy), just a guardrail against accidental edits.
+function applyReadOnlyUI(){
+  const banner = document.getElementById('readOnlyBanner');
+  if(banner) banner.style.display = S.readOnly ? 'flex' : 'none';
+
+  const lockIds = ['projectInfoCard','configureEditableZone','alarmHdrActions','alarmTableContainer','alarmTypeList'];
+  lockIds.forEach(id=>{
+    const el = document.getElementById(id);
+    if(el) el.classList.toggle('ro-locked', !!S.readOnly);
+  });
+
+  // Export page: block saving/status changes, but leave the export
+  // buttons themselves usable — viewing + exporting is the point of
+  // view-only access.
+  const saveBtn = document.getElementById('saveProjectBtn');
+  if(saveBtn){
+    saveBtn.disabled = !!S.readOnly;
+    saveBtn.title = S.readOnly ? "You have view-only access to this project" : '';
+  }
+  const statusCard = document.getElementById('projectStatusCard');
+  if(statusCard) statusCard.classList.toggle('ro-locked', !!S.readOnly);
+}
+
+// ── ASSIGN ENGINEERS (admin only) ───────────────────────────────────────
+// Renders the picker on the Project Info page. Admin-only — engineers
+// never see or manage this, so "engineer creates a project for himself"
+// just falls out of the card being hidden for them.
+async function renderAssignEngineersCard(){
+  const card = document.getElementById('assignEngineersCard');
+  if(!card) return;
+  if(!AUTH || AUTH.role !== 'admin'){ card.style.display = 'none'; return; }
+  card.style.display = 'block';
+
+  if(!ALL_USERS_CACHE.length){
+    try {
+      const res = await fetch(REPO_BASE + 'data/users.json?' + Date.now());
+      ALL_USERS_CACHE = res.ok ? await res.json() : (EMBEDDED_USERS||[]);
+    } catch(e){ ALL_USERS_CACHE = EMBEDDED_USERS || []; }
+  }
+
+  const engineers = ALL_USERS_CACHE.filter(u=>u.role!=='admin');
+  const assignedMap = new Map((S.assignedEngineers||[]).map(a=>[a.username,a]));
+  const list = document.getElementById('assignEngineersList');
+  if(!list) return;
+
+  if(!engineers.length){
+    list.innerHTML = '<div style="font-size:11px;color:var(--text3)">No engineers found.</div>';
+    return;
+  }
+
+  list.innerHTML = engineers.map(u=>{
+    const a = assignedMap.get(u.username);
+    const checked = !!a;
+    const canEdit = a ? !!a.canEdit : true; // newly-checked engineers default to edit access
+    const fullName = `${u.firstName||''} ${u.lastName||''}`.trim();
+    return `<div style="display:flex;align-items:center;gap:10px;padding:6px 0;border-bottom:1px solid var(--border)">
+      <input type="checkbox" id="ae-chk-${esc2(u.username)}" ${checked?'checked':''} onchange="toggleAssignedEngineer('${esc2(u.username)}','${esc2(fullName)}',this.checked)" style="cursor:pointer">
+      <label for="ae-chk-${esc2(u.username)}" style="font-size:12px;flex:1;cursor:pointer">${esc(fullName)}</label>
+      <button type="button" class="status-btn" style="font-size:10px;padding:3px 10px;${checked?'':'opacity:.35;pointer-events:none'}" onclick="setAssignedEngineerEdit('${esc2(u.username)}')">${canEdit?'✎ Can Edit':'👁 View Only'}</button>
+    </div>`;
+  }).join('');
+}
+
+function toggleAssignedEngineer(username, name, checked){
+  S.assignedEngineers = S.assignedEngineers || [];
+  const idx = S.assignedEngineers.findIndex(a=>a.username===username);
+  if(checked){
+    if(idx===-1) S.assignedEngineers.push({ username, name, canEdit:true });
+  } else {
+    if(idx!==-1) S.assignedEngineers.splice(idx,1);
+  }
+  renderAssignEngineersCard();
+}
+
+function setAssignedEngineerEdit(username){
+  const a = (S.assignedEngineers||[]).find(x=>x.username===username);
+  if(!a) return;
+  a.canEdit = !a.canEdit;
+  renderAssignEngineersCard();
+}
+
 function openProject(snapJson){
   try {
     const snap = typeof snapJson === 'string' ? JSON.parse(snapJson) : snapJson;
     const info = snap.info || {};
+
+    // Who am I on this project, and can I edit it?
+    const role = computeProjectRole(snap);
+    if(role === 'none'){
+      toast("You don't have access to this project.", 'err');
+      return;
+    }
+    S.currentProjectOwner = {
+      ownerFolder: info.engineerName || (AUTH.firstName + ' ' + AUTH.lastName).trim(),
+      username   : info.engineerId   || AUTH.username
+    };
+    S.assignedEngineers = Array.isArray(snap.assignedEngineers) ? JSON.parse(JSON.stringify(snap.assignedEngineers)) : [];
+    S.readOnly = (role === 'viewer');
 
     // Restore project info fields
     const set = (id,v)=>{ const el=document.getElementById(id); if(el) el.value=v||''; };
@@ -4049,7 +4296,9 @@ function openProject(snapJson){
 
     toast(`Project "${info.projectRef || info.projectName || 'unknown'}" opened ✓`);
     logActivity('project_open', `Opened project "${info.projectRef||''}" (${info.projectName||''}) by ${info.engineerName||''}`);
+    renderAssignEngineersCard();
     goPage('configure');
+    applyReadOnlyUI();
 
   } catch(e){
     toast('Failed to open project: ' + e.message, 'err');
@@ -4058,6 +4307,8 @@ function openProject(snapJson){
 }
 
 async function deleteProject(userName, folderName){
+  const isOwner = userName === (AUTH.firstName + ' ' + AUTH.lastName).trim();
+  if(!(AUTH.role==='admin' || isOwner)){ toast("Only the project's owner or an admin can delete it.", 'err'); return; }
   if(!confirm(`Delete project "${folderName}" by ${userName}? This cannot be undone.`)) return;
   try {
     const path = `Projects/${userName}/${folderName}/project.json`;
@@ -4084,12 +4335,15 @@ async function duplicateProject(snapJson, userName){
     const newSnap = JSON.parse(JSON.stringify(snap));
     newSnap.info.projectRef = newRef.trim();
     newSnap.info.projectName = (newSnap.info.projectName||'') + ' (Copy)';
+    newSnap.info.engineerName = AUTH.firstName + ' ' + AUTH.lastName;
+    newSnap.info.engineerId = AUTH.username;
     newSnap.savedAt = new Date().toISOString();
     newSnap.savedBy = AUTH.username;
     newSnap.status = 'draft';
     newSnap.version = 1;
+    newSnap.assignedEngineers = []; // the duplicate starts unshared — owned solely by whoever duplicated it
 
-    const pathObj = getProjectPath(AUTH.firstName, AUTH.lastName, newRef.trim());
+    const pathObj = getProjectPath((AUTH.firstName + ' ' + AUTH.lastName).trim(), newRef.trim());
     await githubRequest('PUT', pathObj.apiPath, {
       message: `Duplicate project: ${newRef.trim()} by ${AUTH.username}`,
       rawContent: JSON.stringify(newSnap, null, 2)
@@ -4211,6 +4465,7 @@ async function openVersionHistory(userName, projectRef){
 }
 
 async function restoreVersion(snap, userName, projectRef){
+  if(S.readOnly){ toast('You have view-only access to this project — you can\'t restore a version.','err'); return; }
   closeOverlay('versionHistoryOverlay');
   const btn = document.getElementById('saveProjectBtn');
   if(btn){ btn.innerHTML='⏳ Restoring…'; btn.disabled=true; }
@@ -4221,8 +4476,10 @@ async function restoreVersion(snap, userName, projectRef){
     const vNum = await getNextVersionNumber(userName, projectRef);
     await saveVersion(userName, projectRef, currentSnapshot, vNum);
 
-    // Write the restored version as the new latest
-    const pathObj = getProjectPath(AUTH.firstName, AUTH.lastName, projectRef);
+    // Write the restored version as the new latest — back into the
+    // project's own owner folder (userName), not necessarily whoever is
+    // currently logged in and clicking restore.
+    const pathObj = getProjectPath(userName, projectRef);
     let sha;
     try { const ex = await githubRequest('GET', pathObj.apiPath); sha = ex.sha; } catch(e){}
     await githubRequest('PUT', pathObj.apiPath, {
@@ -4328,6 +4585,11 @@ function resetWizard(){
   S.eqDone        = false;
   S.projectStatus = 'draft';
   S.unlocked      = new Set(['project']);
+  // A brand-new project is always owned by (and fully editable by) whoever
+  // is creating it — admin or engineer alike.
+  S.currentProjectOwner = { ownerFolder: (AUTH.firstName+' '+AUTH.lastName).trim(), username: AUTH.username };
+  S.assignedEngineers = [];
+  S.readOnly = false;
   updateTabs();
   renderEquipment();
   // Clear project form
@@ -4335,6 +4597,8 @@ function resetWizard(){
     const el = document.getElementById(id); if(el) el.value='';
   });
   populateEngineerBanner();
+  renderAssignEngineersCard();
+  applyReadOnlyUI();
 }
 
 
