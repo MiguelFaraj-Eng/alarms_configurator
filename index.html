@@ -506,6 +506,7 @@ html.light .login-logo{filter:none;}
     <div class="h-step locked" id="tab-export" onclick="tryNav('export')"><div class="step-n">3</div>Export</div>
     <div class="h-step" id="tab-settings" onclick="trySettings()"><div class="step-n">⚙</div>Settings</div>
     <div class="h-step" id="tab-users" onclick="tryUsers()" style="display:none"><div class="step-n">👥</div>Users</div>
+    <div class="h-step" id="tab-deleted" onclick="tryDeletedProjects()" style="display:none"><div class="step-n">🗑</div>Deleted</div>
   </div>
   <div class="h-right">
     <button class="theme-pill" onclick="toggleTheme()">
@@ -527,6 +528,7 @@ html.light .login-logo{filter:none;}
         <div class="user-dd-item" onclick="closeUserMenu();setTimeout(openEditProfile,50)">✏️ Edit Profile</div>
         <div class="user-dd-item" id="ddSettingsItem" onclick="closeUserMenu();setTimeout(trySettings,50)">⚙ Settings</div>
         <div class="user-dd-item" id="ddUsersItem" style="display:none" onclick="closeUserMenu();setTimeout(tryUsers,50)">👥 User Management</div>
+        <div class="user-dd-item" id="ddDeletedItem" style="display:none" onclick="closeUserMenu();setTimeout(tryDeletedProjects,50)">🗑 Deleted Projects</div>
         <div class="user-dd-item danger" onclick="doAppLogout()">⏻ Sign Out</div>
       </div>
     </div>
@@ -896,6 +898,29 @@ html.light .login-logo{filter:none;}
           <div style="font-size:12px;color:var(--text3);padding:16px 0">Click Refresh to load activity log…</div>
         </div>
       </div>
+    </div>
+  </div>
+
+  <!-- PAGE: DELETED PROJECTS (Admin only) -->
+  <div class="page" id="page-deleted">
+    <div class="dash-page">
+      <div class="dash-header">
+        <div>
+          <div style="font-size:22px;font-weight:700">🗑 Deleted Projects</div>
+          <div style="font-size:12px;color:var(--text2);margin-top:3px" id="deletedSubtitle">Loading…</div>
+        </div>
+        <button class="btn btn-outline btn-sm" onclick="loadDeletedProjects()">↻ Refresh</button>
+      </div>
+      <div style="background:var(--accent-light);border:1px solid var(--accent);border-radius:8px;padding:10px 16px;font-size:12px;color:var(--text2);margin-bottom:20px;">
+        Deleted from a dashboard, projects land here under <code style="font-family:'DM Mono',monospace;font-size:11px">Deleted/&lt;Engineer&gt;/&lt;Project Reference&gt;/project.json</code> — same naming structure as live projects. This page, and the folder itself, are Admin-only. Restore a project to bring it back to its original spot in Projects, or erase it forever.
+      </div>
+      <div style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap">
+        <div class="um-search-wrap" style="flex:1;min-width:200px">
+          <span class="um-search-icon">⌕</span>
+          <input type="text" class="um-search" id="deletedSearch" placeholder="Search deleted projects, clients, sites…" oninput="filterDeletedProjects()">
+        </div>
+      </div>
+      <div id="deletedContent"></div>
     </div>
   </div>
 </div><!-- /main -->
@@ -1593,7 +1618,7 @@ function getAllAlarms(){
 // ══════════════════════════════════════════════════
 //  NAVIGATION
 // ══════════════════════════════════════════════════
-const TABS = ['dashboard','project','configure','export','settings','users'];
+const TABS = ['dashboard','project','configure','export','settings','users','deleted'];
 const LOCK_MSG = {
   configure:'Complete project info first.',
   export:'Set at least one equipment quantity.'
@@ -1602,6 +1627,7 @@ const LOCK_MSG = {
 function tryNav(id){
   if(id==='settings'){ trySettings(); return; }
   if(id==='users'){ tryUsers(); return; }
+  if(id==='deleted'){ tryDeletedProjects(); return; }
   if(id==='dashboard'){ goDashboard(); return; }
   if(!S.unlocked.has(id)){ toast(LOCK_MSG[id]||'Complete previous steps first.','err'); return; }
   goPage(id);
@@ -1612,7 +1638,7 @@ function updateTabs(){
     const t = document.getElementById('tab-'+id);
     if(!t) return;
     t.classList.remove('active','locked','done');
-    if(!S.unlocked.has(id) && !['settings','users','dashboard'].includes(id)) t.classList.add('locked');
+    if(!S.unlocked.has(id) && !['settings','users','deleted','dashboard'].includes(id)) t.classList.add('locked');
   });
   const settingsTab = document.getElementById('tab-settings');
   if(settingsTab && AUTH && AUTH.role !== 'admin') settingsTab.style.display = 'none';
@@ -2821,6 +2847,35 @@ async function githubPutFile(path, rawContent, sha, message){
   });
 }
 
+// Deleted/ is admin-only. This wrapper attaches {username, passwordHash} so
+// the Vercel proxy can independently re-verify admin status against
+// data/users.json on every call — see api/github.js. Never call this for
+// paths outside Deleted/; use githubRequest for everything else.
+async function deletedGithubRequest(method, path, body){
+  const res = await fetch(VERCEL_API, {
+    method : 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body   : JSON.stringify({
+      method, path, body,
+      adminAuth: AUTH ? { username: AUTH.username, passwordHash: AUTH.passwordHash } : null
+    })
+  });
+  const text = await res.text();
+  let data;
+  try { data = JSON.parse(text); } catch(e) { data = { raw: text }; }
+  if(!res.ok){
+    const msg = data.message || data.error || data.raw || res.statusText || 'unknown';
+    throw new Error(`GitHub ${method} failed: ${res.status} — ${msg}`);
+  }
+  return data;
+}
+
+function getDeletedProjectPath(ownerFolder, projectRef){
+  const userName = String(ownerFolder||'').trim();
+  const safeRef  = (projectRef||'unnamed').trim();
+  return `Deleted/${userName}/${safeRef}/project.json`;
+}
+
 // ══════════════════════════════════════════════════
 //  AUTH — session stored in sessionStorage
 // ══════════════════════════════════════════════════
@@ -2937,6 +2992,8 @@ function onLoginSuccess(){
   const isAdmin = AUTH.role === 'admin';
   document.getElementById('tab-users').style.display = isAdmin ? 'flex' : 'none';
   document.getElementById('ddUsersItem').style.display = isAdmin ? 'flex' : 'none';
+  document.getElementById('tab-deleted').style.display = isAdmin ? 'flex' : 'none';
+  document.getElementById('ddDeletedItem').style.display = isAdmin ? 'flex' : 'none';
 
   // Auto-load the real alarm catalog (data/Alarms/<Category>/<Equipment>.xlsx) on login
   ensureCatalogLoaded().then(()=>{
@@ -3356,6 +3413,7 @@ async function loadActivityLog(){
 
     const typeIcon = {
       login:'🔐', logout:'🚪', project_save:'💾', project_delete:'🗑',
+      project_restore:'♻️', project_undelete:'♻️', project_purge:'🔥',
       project_open:'📂', password_reset:'🔑', status_change:'🏷',
       profile_update:'✏️', export:'📤'
     };
@@ -3687,6 +3745,12 @@ function tryUsers(){
   goPage('users');
   renderUsersPage();
   loadActivityLog();
+}
+
+function tryDeletedProjects(){
+  if(!AUTH || AUTH.role !== 'admin'){ toast('Deleted Projects is restricted to Admins.', 'err'); return; }
+  goPage('deleted');
+  loadDeletedProjects();
 }
 
 // ══════════════════════════════════════════════════
@@ -4119,6 +4183,143 @@ function renderDashCards(groups){
   });
 }
 
+// ══════════════════════════════════════════════════
+//  DELETED PROJECTS (Admin only) — mirrors Projects/ structure under
+//  Deleted/<Engineer Full Name>/<Project Reference>/project.json
+// ══════════════════════════════════════════════════
+async function loadDeletedProjects(){
+  const content  = document.getElementById('deletedContent');
+  const subtitle = document.getElementById('deletedSubtitle');
+  if(!AUTH || AUTH.role !== 'admin'){ toast('Deleted Projects is restricted to Admins.', 'err'); return; }
+  content.innerHTML = '<div style="color:var(--text3);font-size:12px;padding:20px 0">Loading deleted projects…</div>';
+
+  try {
+    let userFolders = [];
+    try {
+      const data = await deletedGithubRequest('GET', 'Deleted');
+      userFolders = Array.isArray(data) ? data.filter(f=>f.type==='dir') : [];
+    } catch(e){
+      if(e.message && (e.message.includes('404') || e.message.includes('500') || e.message.includes('Not Found'))){
+        userFolders = [];
+      } else { throw e; }
+    }
+
+    let totalProjects = 0;
+    const groups = [];
+
+    for(const userFolder of userFolders){
+      let projectFolders = [];
+      try {
+        const data = await deletedGithubRequest('GET', `Deleted/${userFolder.name}`);
+        projectFolders = Array.isArray(data) ? data.filter(f=>f.type==='dir') : [];
+      } catch(e){ continue; }
+
+      const projects = [];
+      for(const pf of projectFolders){
+        try {
+          const jData = await deletedGithubRequest('GET', `Deleted/${userFolder.name}/${pf.name}/project.json`);
+          const snap = JSON.parse(atob(jData.content.replace(/\n/g,'')));
+          projects.push({ snap, sha: jData.sha, folderName: pf.name, userName: userFolder.name });
+        } catch(e){ continue; }
+      }
+      if(projects.length) groups.push({ userName: userFolder.name, projects });
+      totalProjects += projects.length;
+    }
+
+    subtitle.textContent = `${totalProjects} deleted project${totalProjects!==1?'s':''}`;
+
+    if(!totalProjects){
+      content.innerHTML = `<div class="dash-empty"><div class="dash-empty-icon">🗑</div><div style="font-size:14px;font-weight:600">Deleted Projects is empty</div><div style="font-size:12px">Projects deleted from the dashboard show up here, and can be restored</div></div>`;
+      return;
+    }
+
+    window._deletedGroups = groups;
+    renderDeletedCards(groups);
+  } catch(e){
+    content.innerHTML = `<div class="dash-empty"><div class="dash-empty-icon">⚠️</div><div style="font-size:14px;font-weight:600">Failed to load Deleted Projects</div><div style="font-size:12px;color:var(--red)">${esc(e.message)}</div></div>`;
+    subtitle.textContent = 'Error loading';
+  }
+}
+
+function filterDeletedProjects(){
+  if(!window._deletedGroups) return;
+  const q = (document.getElementById('deletedSearch').value||'').toLowerCase();
+  const filtered = window._deletedGroups.map(group=>({
+    ...group,
+    projects: group.projects.filter(({snap})=>{
+      const info = snap.info||{};
+      return !q || [info.projectName,info.projectRef,info.clientName,info.projectSite,info.engineerName,snap.deletedByName].some(v=>(v||'').toLowerCase().includes(q));
+    })
+  })).filter(g=>g.projects.length);
+  renderDeletedCards(filtered);
+}
+
+function renderDeletedCards(groups){
+  const content = document.getElementById('deletedContent');
+  content.innerHTML = '';
+
+  if(!groups.length){
+    content.innerHTML = `<div class="dash-empty"><div class="dash-empty-icon">🔍</div><div style="font-size:14px;font-weight:600">No deleted projects match your search</div></div>`;
+    return;
+  }
+
+  groups.forEach(group => {
+    const wrap = document.createElement('div');
+    wrap.style.marginBottom = '28px';
+
+    if(groups.length > 1){
+      const initials = group.userName.split(' ').map(w=>w[0]||'').join('').slice(0,2).toUpperCase();
+      const label = document.createElement('div');
+      label.className = 'dash-user-label';
+      label.innerHTML = `<div class="dash-user-avatar">${initials}</div><div style="font-size:13px;font-weight:600">${esc(group.userName)}</div><div style="font-size:11px;color:var(--text3);margin-left:4px">${group.projects.length} project${group.projects.length!==1?'s':''}</div>`;
+      wrap.appendChild(label);
+    }
+
+    const grid = document.createElement('div');
+    grid.className = 'proj-grid';
+
+    group.projects.forEach(({snap, folderName, userName}) => {
+      const info = snap.info || {};
+      const eqCount = (snap.selectedEq||[]).length;
+      const deletedAt = snap.deletedAt ? new Date(snap.deletedAt).toLocaleString() : '—';
+
+      const card = document.createElement('div');
+      card.className = 'proj-card';
+      card.style.opacity = '0.9';
+      card.innerHTML = `
+        <div class="proj-card-header">
+          <div style="flex:1;min-width:0">
+            <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px">
+              <div class="proj-ref" style="margin-bottom:0">${esc(info.projectRef||folderName)}</div>
+              <span class="status-badge" style="background:var(--red-light,rgba(220,38,38,.12));color:var(--red)">🗑 Deleted</span>
+            </div>
+            <div class="proj-name">${esc(info.projectName||'Untitled Project')}</div>
+            <div class="proj-client">${esc(info.clientName||'—')}</div>
+          </div>
+        </div>
+        <div class="proj-card-body">
+          <div class="proj-meta">📍 ${esc(info.projectSite||'—')}</div>
+          <div class="proj-meta">👤 ${esc(info.engineerName||userName)}</div>
+          <div class="proj-meta">🗑 Deleted ${esc(deletedAt)} by ${esc(snap.deletedByName||snap.deletedBy||'—')}</div>
+        </div>
+        <div class="proj-card-footer">
+          <span class="proj-stat">${eqCount} eq. type${eqCount!==1?'s':''}</span>
+          <div style="margin-left:auto;display:flex;gap:6px">
+            <button class="btn btn-primary btn-sm proj-restore-btn">♻ Restore</button>
+            <button class="btn btn-outline btn-sm proj-purge-btn" style="color:var(--red);border-color:var(--red)">Delete Forever</button>
+          </div>
+        </div>`;
+
+      card.querySelector('.proj-restore-btn').addEventListener('click', (e)=>{ e.stopPropagation(); restoreProject(userName, folderName); });
+      card.querySelector('.proj-purge-btn').addEventListener('click', (e)=>{ e.stopPropagation(); purgeDeletedProject(userName, folderName); });
+      grid.appendChild(card);
+    });
+
+    wrap.appendChild(grid);
+    content.appendChild(wrap);
+  });
+}
+
 // ── PROJECT ACCESS / READ-ONLY MODE ─────────────────────────────────────
 // Determines the current user's relationship to a project snapshot:
 //   'admin'  — always full edit rights, regardless of ownership
@@ -4306,22 +4507,168 @@ function openProject(snapJson){
   }
 }
 
+// Copies every file under <root>/<user>/<folder>/versions/ to the same
+// path under a different root (Projects/ <-> Deleted/), byte-for-byte —
+// this is what keeps a deleted project's version history intact and
+// mirrors the live naming structure exactly, not just project.json.
+// Nothing is deleted here; callers only remove the source after every
+// copy below (and the project.json copy) has succeeded.
+async function copyVersionFiles(userName, folderName, fromRoot, toRoot, fromReq, toReq, commitLabel){
+  let versionFiles = [];
+  try {
+    const data = await fromReq('GET', `${fromRoot}/${userName}/${folderName}/versions`);
+    versionFiles = Array.isArray(data) ? data.filter(f=>f.type==='file') : [];
+  } catch(e){ /* no versions/ folder for this project — nothing to move */ }
+
+  for(const vf of versionFiles){
+    const src = await fromReq('GET', `${fromRoot}/${userName}/${folderName}/versions/${vf.name}`);
+    let destSha;
+    try {
+      const existing = await toReq('GET', `${toRoot}/${userName}/${folderName}/versions/${vf.name}`);
+      destSha = existing.sha;
+    } catch(e){ /* new file at destination — normal case */ }
+    await toReq('PUT', `${toRoot}/${userName}/${folderName}/versions/${vf.name}`, {
+      message: `${commitLabel}: ${folderName}/versions/${vf.name}`,
+      content: src.content.replace(/\n/g,''), // already base64 from GitHub — pass through as-is
+      ...(destSha ? { sha: destSha } : {})
+    });
+  }
+  return versionFiles;
+}
+
+// Removes every file under <root>/<user>/<folder>/versions/ — used once
+// the corresponding copy above has already landed safely elsewhere.
+async function deleteVersionFiles(userName, folderName, root, req, commitLabel){
+  let versionFiles = [];
+  try {
+    const data = await req('GET', `${root}/${userName}/${folderName}/versions`);
+    versionFiles = Array.isArray(data) ? data.filter(f=>f.type==='file') : [];
+  } catch(e){ return; }
+  for(const vf of versionFiles){
+    try {
+      await req('DELETE', `${root}/${userName}/${folderName}/versions/${vf.name}`, {
+        message: `${commitLabel}: ${folderName}/versions/${vf.name}`,
+        sha: vf.sha
+      });
+    } catch(e){ console.warn('Failed to remove version file', vf.name, e.message); }
+  }
+}
+
 async function deleteProject(userName, folderName){
   const isOwner = userName === (AUTH.firstName + ' ' + AUTH.lastName).trim();
   if(!(AUTH.role==='admin' || isOwner)){ toast("Only the project's owner or an admin can delete it.", 'err'); return; }
-  if(!confirm(`Delete project "${folderName}" by ${userName}? This cannot be undone.`)) return;
+  if(!confirm(`Delete project "${folderName}" by ${userName}?\n\nIt will be moved to Deleted Projects (Admins only) and can be restored later.`)) return;
   try {
-    const path = `Projects/${userName}/${folderName}/project.json`;
-    const fileData = await githubRequest('GET', path);
-    await githubRequest('DELETE', path, {
+    const livePath = `Projects/${userName}/${folderName}/project.json`;
+    const deadPath = getDeletedProjectPath(userName, folderName);
+
+    // Read the live file first so we move its exact content, not a
+    // re-serialized copy.
+    const fileData = await githubRequest('GET', livePath);
+    const snap = JSON.parse(atob(fileData.content.replace(/\n/g,'')));
+
+    // Stamp deletion metadata (mirrors the savedAt/savedBy convention
+    // already used for saves) so admins can see who deleted what, when.
+    snap.deletedAt     = new Date().toISOString();
+    snap.deletedBy     = AUTH.username;
+    snap.deletedByName = (AUTH.firstName + ' ' + AUTH.lastName).trim();
+    snap.originalPath  = livePath;
+
+    // 1) Copy version history across first (if any), then the project
+    //    file itself — nothing gets touched in Projects/ until every
+    //    copy below has landed safely in Deleted/.
+    await copyVersionFiles(userName, folderName, 'Projects', 'Deleted', githubRequest, deletedGithubRequest, `Move to Deleted: ${folderName}`);
+
+    let deadSha;
+    try {
+      const existing = await deletedGithubRequest('GET', deadPath);
+      deadSha = existing.sha; // overwriting a stale Deleted/ copy, if any
+    } catch(e){ /* nothing there yet — normal case */ }
+
+    await deletedGithubRequest('PUT', deadPath, {
+      message: `Move to Deleted: ${folderName} (owner: ${userName})`,
+      rawContent: JSON.stringify(snap, null, 2),
+      ...(deadSha ? { sha: deadSha } : {})
+    });
+
+    // 2) Now remove the live copies — project.json, then its versions/.
+    await githubRequest('DELETE', livePath, {
       message: `Delete project: ${folderName}`,
       sha: fileData.sha
     });
-    toast(`Project "${folderName}" deleted ✓`);
-    await logActivity('project_delete', `Deleted project "${folderName}" (owner: ${userName})`);
+    await deleteVersionFiles(userName, folderName, 'Projects', githubRequest, `Delete project: ${folderName}`);
+
+    toast(`Project "${folderName}" moved to Deleted Projects ✓`);
+    await logActivity('project_delete', `Moved project "${folderName}" (owner: ${userName}) to Deleted Projects`);
     loadDashboard();
   } catch(e){
     toast('Delete failed: ' + e.message, 'err');
+  }
+}
+
+async function restoreProject(userName, folderName){
+  if(!AUTH || AUTH.role !== 'admin'){ toast('Restoring projects is restricted to Admins.', 'err'); return; }
+  if(!confirm(`Restore project "${folderName}" (owner: ${userName}) back to Projects?`)) return;
+  try {
+    const deadPath = getDeletedProjectPath(userName, folderName);
+    const livePath = `Projects/${userName}/${folderName}/project.json`;
+
+    const fileData = await deletedGithubRequest('GET', deadPath);
+    const snap = JSON.parse(atob(fileData.content.replace(/\n/g,'')));
+    delete snap.deletedAt;
+    delete snap.deletedBy;
+    delete snap.deletedByName;
+    delete snap.originalPath;
+
+    // If a project now occupies the live path (e.g. someone recreated the
+    // same reference after the delete), don't silently overwrite it.
+    let liveSha;
+    try {
+      const liveExisting = await githubRequest('GET', livePath);
+      liveSha = liveExisting.sha;
+      if(!confirm(`A project already exists at "${folderName}" for ${userName}. Overwrite it with the restored version?`)) return;
+    } catch(e){ /* nothing live there — normal case */ }
+
+    // 1) Copy version history + project file back into Projects/ first.
+    await copyVersionFiles(userName, folderName, 'Deleted', 'Projects', deletedGithubRequest, githubRequest, `Restore project: ${folderName}`);
+
+    await githubRequest('PUT', livePath, {
+      message: `Restore project: ${folderName} (owner: ${userName})`,
+      rawContent: JSON.stringify(snap, null, 2),
+      ...(liveSha ? { sha: liveSha } : {})
+    });
+
+    // 2) Only then remove it from Deleted/ — project.json and its versions/.
+    await deletedGithubRequest('DELETE', deadPath, {
+      message: `Restore project: ${folderName} — removing from Deleted`,
+      sha: fileData.sha
+    });
+    await deleteVersionFiles(userName, folderName, 'Deleted', deletedGithubRequest, `Restore project: ${folderName} — removing from Deleted`);
+
+    toast(`Project "${folderName}" restored ✓`);
+    await logActivity('project_undelete', `Restored project "${folderName}" (owner: ${userName}) from Deleted Projects`);
+    loadDeletedProjects();
+  } catch(e){
+    toast('Restore failed: ' + e.message, 'err');
+  }
+}
+
+async function purgeDeletedProject(userName, folderName){
+  if(!AUTH || AUTH.role !== 'admin'){ toast('Permanently deleting projects is restricted to Admins.', 'err'); return; }
+  if(!confirm(`Permanently erase "${folderName}" (owner: ${userName})?\n\nThis removes it from Deleted Projects for good and CANNOT be undone.`)) return;
+  try {
+    const deadPath = getDeletedProjectPath(userName, folderName);
+    const fileData = await deletedGithubRequest('GET', deadPath);
+    await deletedGithubRequest('DELETE', deadPath, {
+      message: `Permanently delete: ${folderName} (owner: ${userName})`,
+      sha: fileData.sha
+    });
+    await deleteVersionFiles(userName, folderName, 'Deleted', deletedGithubRequest, `Permanently delete: ${folderName}`);
+    toast(`Project "${folderName}" permanently deleted ✓`);
+    await logActivity('project_purge', `Permanently deleted project "${folderName}" (owner: ${userName})`);
+    loadDeletedProjects();
+  } catch(e){
+    toast('Permanent delete failed: ' + e.message, 'err');
   }
 }
 
