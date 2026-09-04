@@ -22,9 +22,44 @@ module.exports = async function handler(req, res) {
   if (!path) return res.status(400).json({ error: 'Missing path' });
 
   var decoded = decodeURIComponent(path);
-  var allowed = ['data/', 'Projects/', 'Projects', 'assets/avatars/', 'assets/avatars'];
+  var allowed = ['data/', 'Projects/', 'Projects', 'assets/avatars/', 'assets/avatars', 'Deleted/', 'Deleted'];
   if (!allowed.some(function(p){ return decoded === p || decoded.startsWith(p); })) {
     return res.status(403).json({ error: 'Path not allowed: ' + path });
+  }
+
+  // "Deleted/" holds soft-deleted projects and must stay unreadable to
+  // normal users. This proxy has no server-side session of its own — the
+  // browser just posts {method,path,body} — so a client-reported "I'm an
+  // admin" flag can't be trusted. Instead, every request touching Deleted/
+  // must carry {username, passwordHash}, which we independently re-check
+  // against data/users.json (the real source of truth) on every call.
+  var isDeletedPath = decoded === 'Deleted' || decoded.startsWith('Deleted/');
+  if (isDeletedPath) {
+    var adminAuth = payload.adminAuth || {};
+    var isAdmin = false;
+    try {
+      var usersUrl = 'https://api.github.com/repos/' + GITHUB_REPO + '/contents/data/users.json';
+      var usersRes = await fetchFn(usersUrl, {
+        headers: {
+          'Authorization': 'Bearer ' + GITHUB_PAT,
+          'Accept':        'application/vnd.github+json',
+          'User-Agent':    'insightech'
+        }
+      });
+      if (usersRes.ok) {
+        var usersJson = await usersRes.json();
+        var usersList = JSON.parse(Buffer.from(usersJson.content, 'base64').toString('utf8'));
+        isAdmin = usersList.some(function(u){
+          return u.username && adminAuth.username &&
+            u.username.toLowerCase() === String(adminAuth.username).toLowerCase() &&
+            u.passwordHash === adminAuth.passwordHash &&
+            u.role === 'admin';
+        });
+      }
+    } catch (e) { isAdmin = false; }
+    if (!isAdmin) {
+      return res.status(403).json({ error: 'Deleted Projects is restricted to Admins.' });
+    }
   }
 
   // Pass the path directly to GitHub API URL — no re-encoding
