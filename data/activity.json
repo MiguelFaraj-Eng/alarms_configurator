@@ -1,5 +1,13 @@
 [
   {
+    "timestamp": "2026-09-04T12:08:45.492Z",
+    "user": "Miguel",
+    "name": "Miguel Faraj",
+    "role": "admin",
+    "type": "project_open",
+    "message": "Opened project \"SOT-1231\" (Testing Project) by Miguel Faraj"
+  },
+  {
     "timestamp": "2026-09-04T12:08:13.414Z",
     "user": "Miguel",
     "name": "Miguel Faraj",
