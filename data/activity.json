@@ -1,5 +1,13 @@
 [
   {
+    "timestamp": "2026-09-04T12:11:07.842Z",
+    "user": "Miguel",
+    "name": "Miguel Faraj",
+    "role": "admin",
+    "type": "export",
+    "message": "Exported project \"SOT-1231\" as Rockwell (TXT, 8 alarms)"
+  },
+  {
     "timestamp": "2026-09-04T12:10:28.751Z",
     "user": "Miguel",
     "name": "Miguel Faraj",
