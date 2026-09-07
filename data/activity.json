@@ -1,5 +1,13 @@
 [
   {
+    "timestamp": "2026-09-07T09:09:01.875Z",
+    "user": "Miguel",
+    "name": "Miguel Faraj",
+    "role": "admin",
+    "type": "export",
+    "message": "Exported project \"SOT-1231\" as Siemens (TXT, 2 units, 9 alarms)"
+  },
+  {
     "timestamp": "2026-09-07T09:08:38.691Z",
     "user": "Miguel",
     "name": "Miguel Faraj",
