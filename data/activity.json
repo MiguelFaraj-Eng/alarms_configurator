@@ -1,5 +1,13 @@
 [
   {
+    "timestamp": "2026-09-09T08:34:04.457Z",
+    "user": "Fady Elias",
+    "name": "Fady Elias",
+    "role": "engineer",
+    "type": "login",
+    "message": "Fady Elias logged in"
+  },
+  {
     "timestamp": "2026-09-09T06:53:23.679Z",
     "user": "Fady Elias",
     "name": "Fady Elias",
