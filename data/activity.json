@@ -1,5 +1,13 @@
 [
   {
+    "timestamp": "2026-09-09T08:48:01.341Z",
+    "user": "Fady Elias",
+    "name": "Fady Elias",
+    "role": "engineer",
+    "type": "export",
+    "message": "Exported project \"SOT166-26\" as CSV"
+  },
+  {
     "timestamp": "2026-09-09T08:47:29.370Z",
     "user": "Fady Elias",
     "name": "Fady Elias",
