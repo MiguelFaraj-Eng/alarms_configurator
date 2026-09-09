@@ -1,5 +1,13 @@
 [
   {
+    "timestamp": "2026-09-09T10:57:37.576Z",
+    "user": "Fady Elias",
+    "name": "Fady Elias",
+    "role": "engineer",
+    "type": "export",
+    "message": "Exported project \"SOT166-26\" as Siemens (TXT, 1 units, 49 alarms)"
+  },
+  {
     "timestamp": "2026-09-09T09:05:09.359Z",
     "user": "Fady Elias",
     "name": "Fady Elias",
