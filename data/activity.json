@@ -1,5 +1,13 @@
 [
   {
+    "timestamp": "2026-09-15T18:52:12.646Z",
+    "user": "Mike Sakr",
+    "name": "Mike Sakr",
+    "role": "engineer",
+    "type": "login",
+    "message": "Mike Sakr logged in"
+  },
+  {
     "timestamp": "2026-09-15T18:42:34.039Z",
     "user": "Eliane Jeitani",
     "name": "Eliane Jeitani",
