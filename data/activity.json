@@ -1,5 +1,13 @@
 [
   {
+    "timestamp": "2026-09-15T18:42:34.039Z",
+    "user": "Eliane Jeitani",
+    "name": "Eliane Jeitani",
+    "role": "admin",
+    "type": "login",
+    "message": "Eliane Jeitani logged in"
+  },
+  {
     "timestamp": "2026-09-09T11:12:03.843Z",
     "user": "Fady Elias",
     "name": "Fady Elias",
