@@ -1,0 +1,747 @@
+{
+  "version": 1,
+  "savedAt": "2026-11-12T14:35:02.716Z",
+  "savedBy": "Fady Elias",
+  "status": "draft",
+  "info": {
+    "projectName": "dfds",
+    "projectRef": "dfsdf",
+    "clientName": "dfsd",
+    "projectSite": "sdfsdf",
+    "projectNotes": "sdfsdf",
+    "engineerName": "Fady Elias",
+    "engineerId": "Fady Elias",
+    "projectDate": "2026-11-12"
+  },
+  "selectedEq": [
+    "Equipments|Infeeder",
+    "Equipments|Interlayer Magazine",
+    "Equipments|Pallet Magazine",
+    "Equipments|Robot",
+    "Equipments|Robot Head",
+    "Equipments|System",
+    "General|General",
+    "Motors|Asynchronous Motor",
+    "Motors|MDR, DDR, PGD",
+    "Motors|Servo Motor",
+    "Pneumatics|Accumulation Table",
+    "Pneumatics|Ambaflex Spiral Conveyor",
+    "Pneumatics|Backstop",
+    "Pneumatics|Carton Holders",
+    "Pneumatics|Destacker",
+    "Pneumatics|Devider",
+    "Pneumatics|Drop-Type Packer",
+    "Pneumatics|Gate",
+    "Pneumatics|Guide",
+    "Pneumatics|Merge",
+    "Pneumatics|Orientor",
+    "Pneumatics|Pressing Device",
+    "Pneumatics|Pusher",
+    "Pneumatics|Rotating Device",
+    "Pneumatics|Sliding Plate",
+    "Pneumatics|Squaring System",
+    "Pneumatics|Squezer",
+    "Pneumatics|Transfer Unit",
+    "Sensors|Inductive Proximity",
+    "Sensors|Magnetic Cylinder",
+    "Sensors|Photocell",
+    "Sensors|Ultrasonic Sensor",
+    "Sensors|Vaccum Sensor",
+    "Supplier Machines|AGV",
+    "Supplier Machines|Barcode",
+    "Supplier Machines|CHP Machine",
+    "Supplier Machines|Case Erector",
+    "Supplier Machines|Case Packer",
+    "Supplier Machines|Case Sealer",
+    "Supplier Machines|Check Weigher",
+    "Supplier Machines|Dryer Machine",
+    "Supplier Machines|Filler Seamer",
+    "Supplier Machines|Pallet Labeler",
+    "Supplier Machines|Printer",
+    "Supplier Machines|QIMAROX Lift",
+    "Supplier Machines|Strech Wrapper",
+    "Supplier Machines|Vacuum Machine",
+    "Supplier Machines|Washer",
+    "Supplier Machines|Xray Machine"
+  ],
+  "quantities": {
+    "Equipments|Infeeder": {
+      "qty": 1,
+      "line": 1,
+      "start": 1
+    },
+    "Equipments|Pallet Magazine": {
+      "qty": 1,
+      "line": 1,
+      "start": 1
+    },
+    "Equipments|Interlayer Magazine": {
+      "qty": 1,
+      "line": 1,
+      "start": 1
+    },
+    "Equipments|Robot": {
+      "qty": 1,
+      "line": 1,
+      "start": 1
+    },
+    "Equipments|Robot Head": {
+      "qty": 1,
+      "line": 1,
+      "start": 1
+    },
+    "Equipments|System": {
+      "qty": 1,
+      "line": 1,
+      "start": 1
+    }
+  },
+  "entityAlarms": {
+    "Equipments|Infeeder": {
+      "eqName": "Infeeder",
+      "eqCat": "Equipments",
+      "idx": 1,
+      "total": 1,
+      "alarmGroups": [
+        {
+          "alarmType": "Wrong Count",
+          "category": "Operational Failures",
+          "alarms": [
+            {
+              "name": "Wrong Count",
+              "desc": "WRONG COUNT AT HOPPER. FIX ISSUE THEN GO TO OP CONTROL SCREEN AND INITIALIZE SYSTEM.",
+              "value": "",
+              "priority": "",
+              "deleted": false
+            },
+            {
+              "name": "Wrong Count",
+              "desc": "WRONG CARTONS COUNT ON INFEEDER. FIX ISSUE THEN GO TO OP CONTROL SCREEN AND INITIALIZE SYSTEM.",
+              "value": "",
+              "priority": "",
+              "deleted": false
+            }
+          ]
+        },
+        {
+          "alarmType": "Wrong Cartons Positions Picking",
+          "category": "Operational Failures",
+          "alarms": [
+            {
+              "name": "Wrong Cartons Positions Picking",
+              "desc": "WRONG POSITIONS OF CARTON ON PICKING CONVEYOR. FIX ISSUE THEN GO TO OP CONTROL SCREEN AND INITIALIZE SYSTEM.",
+              "value": "-",
+              "priority": "Critical",
+              "deleted": false
+            }
+          ]
+        },
+        {
+          "alarmType": "Wrong Cartons Positions Buffer",
+          "category": "Operational Failures",
+          "alarms": [
+            {
+              "name": "Wrong Cartons Positions Buffer",
+              "desc": "WRONG POSITIONS OF CARTON ON BUFFER CONVEYOR. FIX ISSUE THEN GO TO OP CONTROL SCREEN AND INITIALIZE SYSTEM.",
+              "value": "-",
+              "priority": "Fault",
+              "deleted": false
+            }
+          ]
+        },
+        {
+          "alarmType": "Remaining Products on Picking",
+          "category": "Operational Failures",
+          "alarms": [
+            {
+              "name": "Remaining Products on Picking",
+              "desc": "REMAINING PRODUCTS ON INFEEDER PICKING CONVEYOR AFTER PICKING. FIX ISSUE (PLACE ON THE PALLET) THEN GO TO OP CONTROL SCREEN AND INITIALIZE SYSTEM.",
+              "value": "-",
+              "priority": "Fault",
+              "deleted": false
+            }
+          ]
+        },
+        {
+          "alarmType": "Wrong Cartons Alignment",
+          "category": "Operational Failures",
+          "alarms": [
+            {
+              "name": "Wrong Cartons Alignment",
+              "desc": "WRONG ALIGNMENT OF CARTONS ON INFEEDER PICKING CONVEYOR. FIX ISSUE THEN GO TO CONTROL SCREEN AND INITIALIZE SYSTEM.",
+              "value": "-",
+              "priority": "Fault",
+              "deleted": false
+            }
+          ]
+        },
+        {
+          "alarmType": "Product Pick Failure",
+          "category": "Operational Failures",
+          "alarms": [
+            {
+              "name": "Product Pick Failure",
+              "desc": "PRODUCT IS NOT CORRECTLY PICKED FROM INFEEDER. FIX ISSUE THEN GO TO OP CONTROL SCREEN AND INITIALIZE SYSTEM.",
+              "value": "-",
+              "priority": "Fault",
+              "deleted": false
+            }
+          ]
+        },
+        {
+          "alarmType": "Clearance Detection",
+          "category": "Operational Failures",
+          "alarms": [
+            {
+              "name": "Clearance Detection",
+              "desc": "CLEARANCE SENSOR IS DETECTING A CARTON ON INFEEDER PICKING CONVEYOR. FIX ISSUE THEN GO TO OP CONTROL SCREEN AND INITIALIZE SYSTEM.",
+              "value": "-",
+              "priority": "Fault",
+              "deleted": false
+            }
+          ]
+        }
+      ]
+    },
+    "Equipments|Interlayer Magazine": {
+      "eqName": "Interlayer Magazine",
+      "eqCat": "Equipments",
+      "idx": 1,
+      "total": 1,
+      "alarmGroups": [
+        {
+          "alarmType": "Interlayer Magazine (Laser Alar",
+          "category": "Electrical Failures",
+          "alarms": [
+            {
+              "name": "L01-DL01",
+              "desc": "WRONG READING FOR LASER SENSOR L01-DL01 CHECK SENSOR READINGS AND VALUES.",
+              "value": "DL",
+              "priority": "Fault",
+              "deleted": false
+            }
+          ]
+        },
+        {
+          "alarmType": "Interlayer Magazine (Empty)",
+          "category": "Operational Failures",
+          "alarms": [
+            {
+              "name": "L01-DL01 LMPTY",
+              "desc": "INTERLAYER MAGAZINE IS EMPTY. FILL MAGAZINE TO RESUME OPERATION.",
+              "value": "DL",
+              "priority": "Critical",
+              "deleted": false
+            }
+          ]
+        },
+        {
+          "alarmType": "Interlayer Magazine (Overfilled",
+          "category": "Operational Failures",
+          "alarms": [
+            {
+              "name": "L01-DL01 OVERFILLED",
+              "desc": "INTERLAYER MAGAZINE IS OVERFILLED. REMOVE PRODUCTS TO RESUME OPERATION.",
+              "value": "DL",
+              "priority": "Fault",
+              "deleted": false
+            }
+          ]
+        }
+      ]
+    },
+    "Equipments|Pallet Magazine": {
+      "eqName": "Pallet Magazine",
+      "eqCat": "Equipments",
+      "idx": 1,
+      "total": 1,
+      "alarmGroups": [
+        {
+          "alarmType": "Pallet Magazine (Laser Alar",
+          "category": "Electrical Failures",
+          "alarms": [
+            {
+              "name": "L01-US01",
+              "desc": "WRONG READING FOR LASER SENSOR L01-US01 CHECK SENSOR READINGS AND VALUES.",
+              "value": "US",
+              "priority": "Fault",
+              "deleted": false
+            }
+          ]
+        },
+        {
+          "alarmType": "Pallet Magazine (Empty)",
+          "category": "Operational Failures",
+          "alarms": [
+            {
+              "name": "L01-US01 LMPTY",
+              "desc": "PALLET MAGAZINE IS EMPTY. FILL MAGAZINE TO RESUME OPERATION.",
+              "value": "US",
+              "priority": "Critical",
+              "deleted": false
+            }
+          ]
+        },
+        {
+          "alarmType": "Pallet Magazine (Overfilled",
+          "category": "Operational Failures",
+          "alarms": [
+            {
+              "name": "L01-US01 OVERFILLED",
+              "desc": "PALLET MAGAZINE IS OVERFILLED. REMOVE PRODUCTS TO RESUME OPERATION.",
+              "value": "US",
+              "priority": "Fault",
+              "deleted": false
+            }
+          ]
+        }
+      ]
+    },
+    "Equipments|Robot": {
+      "eqName": "Robot",
+      "eqCat": "Equipments",
+      "idx": 1,
+      "total": 1,
+      "alarmGroups": [
+        {
+          "alarmType": "Robot Emergency Stop",
+          "category": "Safety Failures",
+          "alarms": [
+            {
+              "name": "E01-R01 EMERGENCY",
+              "desc": "EMERGENCY BUTTON ON TEACH PENDANT OF ROBOT E01-R01 IS PRESSED. RELEASE AND RESET.",
+              "value": "R",
+              "priority": "Critical",
+              "deleted": false
+            }
+          ]
+        },
+        {
+          "alarmType": "Safety Zone Violation",
+          "category": "Safety Failures",
+          "alarms": [
+            {
+              "name": "E01-R01 OUTSIDE SAFE ZONE",
+              "desc": "ROBOT E01-R01 IS OUTSIDE SAFE ZONE. MOVE ROBOT MANUALLY USING THE TEACH PENDANT INSIDE THE SAFETY ZONE THEN RESUME OPERATION.",
+              "value": "R",
+              "priority": "Critical",
+              "deleted": false
+            }
+          ]
+        },
+        {
+          "alarmType": "Robot Disconnect Switch",
+          "category": "Electrical Failures",
+          "alarms": [
+            {
+              "name": "E01-R01 DS",
+              "desc": "DISCONNECT SWITCH OF ROBOT  E01-R01 ON ELECTRICAL PANEL IS TURNED OFF.",
+              "value": "R",
+              "priority": "Fault",
+              "deleted": false
+            }
+          ]
+        },
+        {
+          "alarmType": "Robot Not External",
+          "category": "Electrical Failures",
+          "alarms": [
+            {
+              "name": "E01-R01 NOT EXT",
+              "desc": "ROBOT  E01-R01 IS NOT POWERED ON OR IS NOT IN EXTERNAL MODE (EXT). SWITCH TO EXT MODE VIA THE SWITCH ON ROBOT TEACH PENDANT, THEN PRESS RESET.",
+              "value": "R",
+              "priority": "Fault",
+              "deleted": false
+            }
+          ]
+        },
+        {
+          "alarmType": "Robot Motors Off",
+          "category": "Electrical Failures",
+          "alarms": [
+            {
+              "name": "E01-R01 MOTORS OFF",
+              "desc": "E01-R01 ROBOT MOTORS ARE OFF.",
+              "value": "R",
+              "priority": "Fault",
+              "deleted": false
+            }
+          ]
+        },
+        {
+          "alarmType": "Robot Error",
+          "category": "Electrical Failures",
+          "alarms": [
+            {
+              "name": "E01-R01 ERROR",
+              "desc": "ROBOT IS IN ERROR STATE, CHECK ROBOT TEACH PENDANT THEN INITIALIZE ROBOT.",
+              "value": "R",
+              "priority": "Fault",
+              "deleted": false
+            }
+          ]
+        },
+        {
+          "alarmType": "Robot Collision Detection",
+          "category": "Electrical Failures",
+          "alarms": [
+            {
+              "name": "E01-R01 COLLOSSION",
+              "desc": "ROBOT E01-R01 COLLISION OCCURRED AND ROBOT SAFETY SENSOR ON ROBOT HEAD IS TRIGGERED. CYCLE AND ROBOT AREA IS ABORTED. CHECK ISSUE AND IF THERE IS ANY DAMAGE. MOVE ROBOT MANUALLY IF NEEDED THEN PRESS RESET.",
+              "value": "R",
+              "priority": "Fault",
+              "deleted": false
+            }
+          ]
+        },
+        {
+          "alarmType": "Robot Comm Lost",
+          "category": "Electrical Failures",
+          "alarms": [
+            {
+              "name": "E01-R01 COMM LOST",
+              "desc": "COMMUNICATION IS LOST WITH ROBOT CONTROLLER E01-R01 OR ROBOT IS TURNED OFF.",
+              "value": "R",
+              "priority": "Fault",
+              "deleted": false
+            }
+          ]
+        },
+        {
+          "alarmType": "Robot Zone Undefined",
+          "category": "Operational Failures",
+          "alarms": [
+            {
+              "name": "E01-R01 ZONE UNDEFINED",
+              "desc": "ROBOT E01-R01 IS PRESENT IN AN UNDEFINED ZONE AND CANNOT OPERATE. SWITCH ROBOT TO MANUAL AND MOVE IT MANUALLY UNTIL ACTUAL ZONE IS A KNOWN ZONE (ON OPERATOR CONTROL SCREEN) THEN PRESS RESET.",
+              "value": "R",
+              "priority": "Fault",
+              "deleted": false
+            }
+          ]
+        },
+        {
+          "alarmType": "Robot Search Limit",
+          "category": "Operational Failures",
+          "alarms": [
+            {
+              "name": "E01-R01 END SEARCH",
+              "desc": "END POSITION FOR ROBOT E01-R01 FOR SEARCH IS REACHED. CHECK ISSUE AND INTIALIZE ROBOT.",
+              "value": "R",
+              "priority": "Fault",
+              "deleted": false
+            }
+          ]
+        },
+        {
+          "alarmType": "Robot X-Adjustment Limit",
+          "category": "Operational Failures",
+          "alarms": [
+            {
+              "name": "E01-R01 X-ADJUSTMENT LIMIT",
+              "desc": "ADJUSTMENT IN X-DIRECTION FOR ROBOT E01-R01 REACHED ITS END POSITION. CHECK IF SENSOR IS DEFECTED, OR IF LAYER IS TOO DISPLACED. ADJUST AND PRESS RESET TO RESTART ROBOT OPERATION.",
+              "value": "R",
+              "priority": "Fault",
+              "deleted": false
+            }
+          ]
+        },
+        {
+          "alarmType": "Robot Y-Adjustment Limit",
+          "category": "Operational Failures",
+          "alarms": [
+            {
+              "name": "E01-R01 Y-ADJUSTMENT LIMIT",
+              "desc": "ADJUSTMENT IN Y-DIRECTION FOR ROBOT E01-R01 REACHED ITS END POSITION. CHECK IF SENSOR IS DEFECTED, OR IF LAYER IS TOO DISPLACED. ADJUST AND PRESS RESET TO RESTART ROBOT OPERATION.",
+              "value": "R",
+              "priority": "Fault",
+              "deleted": false
+            }
+          ]
+        },
+        {
+          "alarmType": "Robot Z-Adjustment Limit",
+          "category": "Operational Failures",
+          "alarms": [
+            {
+              "name": "E01-R01 Z-ADJUSTMENT LIMIT",
+              "desc": "ADJUSTMENT IN Z-DIRECTION FOR ROBOT E01-R01 REACHED ITS END POSITION. CHECK IF SENSOR IS DEFECTED, OR IF LAYER IS TOO DISPLACED. ADJUST AND PRESS RESET TO RESTART ROBOT OPERATION.",
+              "value": "R",
+              "priority": "Fault",
+              "deleted": false
+            }
+          ]
+        },
+        {
+          "alarmType": "Robot Feeder Conditions",
+          "category": "Operational Failures",
+          "alarms": [
+            {
+              "name": "E01-R01 FEEDER CONDITIONS",
+              "desc": "SUDDEN FEEDER ERROR ON ROBOT E01-R01 CHECK FEEDERS THEN INITIALIZE ROBOT.",
+              "value": "R",
+              "priority": "Fault",
+              "deleted": false
+            }
+          ]
+        }
+      ]
+    },
+    "Equipments|Robot Head": {
+      "eqName": "Robot Head",
+      "eqCat": "Equipments",
+      "idx": 1,
+      "total": 1,
+      "alarmGroups": [
+        {
+          "alarmType": "Robot Head Safety Stop",
+          "category": "Safety Failures",
+          "alarms": [
+            {
+              "name": "E01-R01 EMERGENCY",
+              "desc": "HEAD SAFETY STOP IS TRIGGERED. CHECK IF ANY COLLISION OCCURRED.",
+              "value": "-",
+              "priority": "Critical",
+              "deleted": false
+            }
+          ]
+        },
+        {
+          "alarmType": "Robot Head Gripper 01 Open",
+          "category": "Operational Failures",
+          "alarms": [
+            {
+              "name": "L01-MC01",
+              "desc": "OPEN POSITION SENSOR L01-MC01 OF GRIPPER1 IS NOT REACHED. CHECK IF PISTON IS STUCK, OR IF SENSOR L01-MC01 IS DEFECTED",
+              "value": "MC",
+              "priority": "Fault",
+              "deleted": false
+            }
+          ]
+        },
+        {
+          "alarmType": "Robot Head Gripper 01 Close",
+          "category": "Operational Failures",
+          "alarms": [
+            {
+              "name": "L01-MC01",
+              "desc": "CLOSED POSITION SENSOR L01-MC01 OF GRIPPER1 IS NOT REACHED. CHECK IF PISTON IS STUCK, OR IF SENSOR L01-MC01 IS DEFECTED",
+              "value": "MC",
+              "priority": "Fault",
+              "deleted": false
+            }
+          ]
+        },
+        {
+          "alarmType": "Robot Head Gripper 02 Open",
+          "category": "Operational Failures",
+          "alarms": [
+            {
+              "name": "L01-MC01",
+              "desc": "OPEN POSITION SENSOR L01-MC01 OF GRIPPER 02 IS NOT REACHED. CHECK IF PISTON IS STUCK, OR IF SENSOR L01-MC01 IS DEFECTED",
+              "value": "MC",
+              "priority": "Fault",
+              "deleted": false
+            }
+          ]
+        },
+        {
+          "alarmType": "Robot Head Gripper 02 Close",
+          "category": "Operational Failures",
+          "alarms": [
+            {
+              "name": "L01-MC01",
+              "desc": "CLOSED POSITION SENSOR L01-MC01 OF GRIPPER 02 IS NOT REACHED. CHECK IF PISTON IS STUCK, OR IF SENSOR L01-MC01 IS DEFECTED",
+              "value": "MC",
+              "priority": "Fault",
+              "deleted": false
+            }
+          ]
+        },
+        {
+          "alarmType": "Robot Head Hook 01 Open",
+          "category": "Operational Failures",
+          "alarms": [
+            {
+              "name": "L01-MC01",
+              "desc": "OPEN POSITION SENSOR L01-MC01 OF HOOK1 IS NOT REACHED. CHECK IF PISTON IS STUCK, OR IF SENSOR L01-MC01 IS DEFECTED",
+              "value": "MC",
+              "priority": "Fault",
+              "deleted": false
+            }
+          ]
+        },
+        {
+          "alarmType": "Robot Head Hook 01 Close",
+          "category": "Operational Failures",
+          "alarms": [
+            {
+              "name": "L01-MC01",
+              "desc": "CLOSED POSITION SENSOR L01-MC01 OF HOOK1 IS NOT REACHED. CHECK IF PISTON IS STUCK, OR IF SENSOR L01-MC01 IS DEFECTED",
+              "value": "MC",
+              "priority": "Fault",
+              "deleted": false
+            }
+          ]
+        },
+        {
+          "alarmType": "Robot Head Hook 02 Open",
+          "category": "Operational Failures",
+          "alarms": [
+            {
+              "name": "L01-MC01",
+              "desc": "OPEN POSITION SENSOR L01-MC01 OF HOOK 02 IS NOT REACHED. CHECK IF PISTON IS STUCK, OR IF SENSOR L01-MC01 IS DEFECTED",
+              "value": "MC",
+              "priority": "Fault",
+              "deleted": false
+            }
+          ]
+        },
+        {
+          "alarmType": "Robot Head Hook 02 Close",
+          "category": "Operational Failures",
+          "alarms": [
+            {
+              "name": "L01-MC01",
+              "desc": "CLOSED POSITION SENSOR L01-MC01 OF HOOK 02 IS NOT REACHED. CHECK IF PISTON IS STUCK, OR IF SENSOR L01-MC01 IS DEFECTED",
+              "value": "MC",
+              "priority": "Fault",
+              "deleted": false
+            }
+          ]
+        },
+        {
+          "alarmType": "Robot Head Pallet Arms Open",
+          "category": "Operational Failures",
+          "alarms": [
+            {
+              "name": "L01-MC01",
+              "desc": "OPEN POSITION SENSOR L01-MC01 OF PALLET ARMS IS NOT REACHED. CHECK IF PISTON IS STUCK, OR IF SENSOR L01-MC01 IS DEFECTED",
+              "value": "MC",
+              "priority": "Fault",
+              "deleted": false
+            }
+          ]
+        },
+        {
+          "alarmType": "Robot Head Pallet Arms Close",
+          "category": "Operational Failures",
+          "alarms": [
+            {
+              "name": "L01-MC01",
+              "desc": "CLOSED POSITION SENSOR L01-MC01 OF PALLET ARMS IS NOT REACHED. CHECK IF PISTON IS STUCK, OR IF SENSOR L01-MC01 IS DEFECTED",
+              "value": "MC",
+              "priority": "Fault",
+              "deleted": false
+            }
+          ]
+        },
+        {
+          "alarmType": "Robot Head Vacuum",
+          "category": "Operational Failures",
+          "alarms": [
+            {
+              "name": "L01-VS01",
+              "desc": "REQUIRED VACCUM LEVEL L01-VS01 IS NOT REACHED. CHECK IF PRODUCT IS GRIPPED, OR IF SENSOR L01-VS01 IS DEFECTED",
+              "value": "VS",
+              "priority": "Fault",
+              "deleted": false
+            }
+          ]
+        }
+      ]
+    },
+    "Equipments|System": {
+      "eqName": "System",
+      "eqCat": "Equipments",
+      "idx": 1,
+      "total": 1,
+      "alarmGroups": [
+        {
+          "alarmType": "Wrong Initialization",
+          "category": "Operational Failures",
+          "alarms": [
+            {
+              "name": "Wrong Initialization",
+              "desc": "INITIALIZATION ERROR: ENTERED VALUE DO NOT MATCH. GO TO OP CONTROL SCREEN AND INITIALIZE SYSTEM.",
+              "value": "",
+              "priority": "Fault",
+              "deleted": false
+            }
+          ]
+        },
+        {
+          "alarmType": "Discrepency Layer (Type1)",
+          "category": "Operational Failures",
+          "alarms": [
+            {
+              "name": "Discrepency Layer (Type1)",
+              "desc": "MISMATCH BETWEEN LAYER CALCULATION BY SENSOR AND LAYER CALCULATION BY SEQUENCE. CHECK IF SENSOR IS WORKING PROPERLY. GO TO OP CONTROL SCREEN AND INITIALIZE SYSTEM.",
+              "value": "-",
+              "priority": "Critical",
+              "deleted": false
+            }
+          ]
+        },
+        {
+          "alarmType": "Discrepency Layer (Type2)",
+          "category": "Operational Failures",
+          "alarms": [
+            {
+              "name": "Discrepency Layer (Type2)",
+              "desc": "ACTUAL NUMBER OF LAYER IS DIFFERENT FROM ZERO, BUT CORRESPONDING PHOTOCELL IS NOT DETECTING. CHECK IF SENSOR IS WORKING PROPERLY, GO TO OP CONTROL SCREEN AND INITIALIZE SYSTEM.",
+              "value": "-",
+              "priority": "Fault",
+              "deleted": false
+            }
+          ]
+        },
+        {
+          "alarmType": "Discrepency (Head)",
+          "category": "Operational Failures",
+          "alarms": [
+            {
+              "name": "Discrepency (Head)",
+              "desc": "HEAD DISCREPENCY: PRODUCT IN HEAD DOES NOT MATCH THE HEAD CONDITIONS AND SENSORS. GO TO OP CONTROL SCREEN AND INITIALIZE SYSTEM.",
+              "value": "-",
+              "priority": "Fault",
+              "deleted": false
+            }
+          ]
+        },
+        {
+          "alarmType": "Initialization Required",
+          "category": "Operational Failures",
+          "alarms": [
+            {
+              "name": "Initialization Required",
+              "desc": "SYSTEM REQUIRES INITIALIZATION IN ORDER TO PROCEED. GO TO OP CONTROL SCREEN, CHECK CONDITIONS REQUIRED FOR INITIALIZATION, THEN PRESS INITIALIZE.",
+              "value": "-",
+              "priority": "Fault",
+              "deleted": false
+            }
+          ]
+        },
+        {
+          "alarmType": "Discrepency (Head) (3)",
+          "category": "Operational Failures",
+          "alarms": [
+            {
+              "name": "Cycle Paused",
+              "desc": "CYCLE IS PAUSED. GO TO OP CONTROL SCREEN, AND PRESS PLAY BUTTON TO RESUME OPERATION.",
+              "value": "-",
+              "priority": "Fault",
+              "deleted": false
+            }
+          ]
+        }
+      ]
+    }
+  },
+  "commonAlarms": [],
+  "customEquipment": [],
+  "customProjectAlarms": [],
+  "assignedEngineers": [],
+  "versionNum": 1,
+  "versionSavedAt": "2026-11-12T14:35:05.295Z"
+}
