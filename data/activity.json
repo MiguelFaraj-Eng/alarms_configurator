@@ -1,11 +1,19 @@
 [
   {
+    "timestamp": "2026-11-12T14:35:16.988Z",
+    "user": "Fady Elias",
+    "name": "Fady Elias",
+    "role": "engineer",
+    "type": "export",
+    "message": "Exported project \"dfsdf\" as CSV"
+  },
+  {
     "timestamp": "2026-11-12T14:35:07.400Z",
     "user": "Fady Elias",
     "name": "Fady Elias",
     "role": "engineer",
     "type": "project_save",
-    "message": "Saved project \"dfsdf\" (dfds) v1 — status: draft"
+    "message": "Saved project \"dfsdf\" (dfds) v1 â status: draft"
   },
   {
     "timestamp": "2026-11-12T14:32:50.327Z",
